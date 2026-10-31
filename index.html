@@ -194,6 +194,11 @@ textarea.io{min-height:140px;font-family:ui-monospace,Menlo,Consolas,monospace;f
         </div>
       </div>
       <aside class="side">
+        <div class="panel" id="finalPanel" hidden="">
+          <span class="label">Végeredmény</span>
+          <ul class="teams" id="finalList"></ul>
+          <div class="row"><button class="btn small" id="finalClose">Bezárás</button></div>
+        </div>
         <div class="panel" id="onlinePanel">
           <span class="label">Online játék</span>
           <div id="onOff" style="display:flex;flex-direction:column;gap:10px">
@@ -831,8 +836,13 @@ $("#onStartRound").onclick=()=>startRound(R?R.idx:0);
 $("#onSkip").onclick=()=>setTurn(nextTurnFrom(ON.st.turn));
 $("#onCopy").onclick=()=>{const t=$("#onLink");navigator.clipboard?.writeText(t.value).then(()=>toast("Link másolva."),()=>{t.select();toast("Jelöld ki és másold Ctrl+C-vel.")})};
 $("#onEnd").onclick=()=>$("#onEndConfirm").hidden=false;
+$("#finalClose").onclick=()=>$("#finalPanel").hidden=true;
+$("#onStart").addEventListener("click",()=>$("#finalPanel").hidden=true);
 $("#onEndNo").onclick=()=>$("#onEndConfirm").hidden=true;
-$("#onEndYes").onclick=async()=>{$("#onEndConfirm").hidden=true;ON.offs.forEach(f=>f());try{await gref().remove()}catch(e){}
+$("#onEndYes").onclick=async()=>{$("#onEndConfirm").hidden=true;
+  const sc=ON.st.scores||{},bd=teamOrder(ON.teams).map(u=>({name:ON.teams[u].name,pts:sc[u]||0})).sort((x,y)=>y.pts-x.pts);
+  if(bd.length){$("#finalList").innerHTML=bd.map(x=>`<li class="team"><span class="dot"></span><span>${1+bd.filter(y=>y.pts>x.pts).length}. ${esc(x.name)}</span><span></span><span class="pts">${x.pts}</span></li>`).join("");$("#finalPanel").hidden=false}
+  ON.offs.forEach(f=>f());try{await gref().remove()}catch(e){}
   ON.active=false;ON.teams={};ON.guesses={};ON.st={};store.set("kivagyok.host",null);
   const ev=$("#onEval");if(ev)ev.remove();renderOnline();toast("Az online játék véget ért, az adatai törlődtek.")};
 
@@ -875,7 +885,13 @@ function attachPhone(){const r=p=>P.db.ref(`games/${P.code}/${p}`);
   r("host").on("value",s=>{if(!s.exists()){P.ended=true;store.set("kivagyok.team",null);renderPhone()}})}
 function renderPhone(){
   const b=$("#pBanner"),stage=$("#pBoard").closest(".stage");
-  if(P.ended){b.className="banner";b.textContent="A tanár befejezte a játékot. Köszönjük!";stage.hidden=true;$("#pGuess").hidden=true;$("#pSol").hidden=true;return}
+  if(P.ended){stage.hidden=true;$("#pGuess").hidden=true;$("#pSol").hidden=true;
+    const bd=(P.board||[]).slice().sort((x,y)=>y.pts-x.pts);const mine=bd.find(x=>x.u===P.uid);
+    const rank=x=>1+bd.filter(y=>y.pts>x.pts).length;
+    b.className="banner go";
+    b.innerHTML=mine?`A játék véget ért. Csapatotok, ${esc(mine.name)}: <b>${mine.pts} pont</b>, ${rank(mine)}. hely ${bd.length} csapat közül.`:"A tanár befejezte a játékot. Köszönjük!";
+    $("#pScores").innerHTML=bd.map(x=>`<li class="team${x.u===P.uid?" cur":""}"><span class="dot"></span><span>${rank(x)}. ${esc(x.name)}${x.u===P.uid?" (ti)":""}</span><span></span><span class="pts">${x.pts}</span></li>`).join("");
+    $("#pScores").closest(".panel").querySelector(".label").textContent="Végeredmény";return}
   const st=P.st,me=P.teams[P.uid];$("#pTeam").textContent=me?me.name:"";
   const open=st.open||{},nOpen=openKeys(open).length;
   const myTurn=st.phase==="play"&&st.turn===P.uid&&!P.mine&&nOpen<6;
@@ -900,6 +916,7 @@ function renderPhone(){
     sv.innerHTML=`<span class="label">Megfejtés</span><h2>${esc(s.name)}</h2><div class="meta">${esc(s.years)}${s.period?" · "+esc(s.period):""}</div><p style="margin:0"><b>${verdict}</b></p>
       <div class="why">${(s.clues||[]).slice().sort((a,c)=>(a.ord||99)-(c.ord||99)).map(c=>`<article><div class="th">${isImg(c.img)?`<img src="${esc(c.img)}" alt="">`:esc(c.img)}</div><div><h3>${c.ord?`<span class="label">${c.ord}. kép</span> `:`<span class="label">nem kérték</span> `}${esc(c.label)}</h3><p>${esc(c.note)}</p></div></article>`).join("")}</div>`}
   const ord=teamOrder(P.teams),sc=st.scores||{};
+  if(st.phase&&ord.length)P.board=ord.map(u=>({u,name:P.teams[u].name,pts:sc[u]||0}));
   $("#pScores").innerHTML=ord.map(u=>`<li class="team${u===P.uid?" cur":""}"><span class="dot"></span><span>${esc(P.teams[u].name)}${u===P.uid?" (ti)":""}</span><span></span><span class="pts">${sc[u]||0}</span></li>`).join("")}
 $("#jGo").onclick=join;
 $("#jName").addEventListener("keydown",e=>{if(e.key==="Enter")join()});
