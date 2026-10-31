@@ -1,0 +1,924 @@
+<!doctype html>
+<html lang="hu"><head><meta charset="utf-8"><title>Ki vagyok én?</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya:wght@500;700;800&amp;family=Alegreya+Sans:wght@400;500;700&amp;family=Alegreya+SC:wght@700&amp;display=swap">
+<style>
+/* Elrendezés: kvízműsor-tábla — bal oldalt a hat letakart kép, jobb oldalt a csapatok és a pontérték; projektorra méretezve. */
+:root{
+  --bg:#e9ecf1; --surface:#ffffff; --ink:#1a2132; --muted:#5a6377; --line:#d3d8e1;
+  --board:#1d2942; --board-2:#26375a; --brass:#b7862c; --brass-ink:#fbf1d6;
+  --accent:#8c2f2b; --accent-ink:#ffffff; --ok:#2c7a4b; --bad:#a63a36; --shade:rgba(20,28,45,.08);
+  --f-display:"Alegreya", Georgia, "Times New Roman", serif;
+  --f-body:"Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+  --f-num:"Alegreya SC", Georgia, serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10141d; --surface:#181e2b; --ink:#e7eaf1; --muted:#9ca5b9; --line:#2b3346;
+  --board:#22314f; --board-2:#2d4068; --brass:#d8a547; --brass-ink:#1b1608;
+  --accent:#d26a5d; --accent-ink:#1a0c0a; --ok:#5fbf86; --bad:#e07a72; --shade:rgba(0,0,0,.35); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10141d; --surface:#181e2b; --ink:#e7eaf1; --muted:#9ca5b9; --line:#2b3346;
+  --board:#22314f; --board-2:#2d4068; --brass:#d8a547; --brass-ink:#1b1608;
+  --accent:#d26a5d; --accent-ink:#1a0c0a; --ok:#5fbf86; --bad:#e07a72; --shade:rgba(0,0,0,.35); color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 40px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--brass);outline-offset:2px}
+
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding-bottom:12px}
+.brand h1{font-family:var(--f-display);font-weight:800;font-size:clamp(2rem,4.5vw,3rem);margin:0;line-height:1;letter-spacing:-.01em}
+.brand h1 span{color:var(--brass)}
+.brand p{margin:4px 0 0;color:var(--muted)}
+nav.tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:4px}
+nav.tabs button{border:0;background:transparent;padding:6px 16px;border-radius:999px;font-weight:500}
+nav.tabs button[aria-selected="true"]{background:var(--board);color:#fff}
+
+.btn{border:1px solid var(--line);background:var(--surface);padding:8px 14px;border-radius:8px;font-weight:500}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.ok{background:var(--ok);color:#fff;border-color:var(--ok)}
+.btn.bad{background:transparent;color:var(--bad);border-color:var(--bad)}
+.btn.small{padding:4px 10px;font-size:.9rem}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.label{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+
+/* Rejtvényválasztó */
+.picker{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.chip{min-width:44px;height:44px;border-radius:8px;border:1px solid var(--line);background:var(--surface);font-family:var(--f-num);font-size:1.1rem;font-variant-numeric:tabular-nums;position:relative}
+.chip[aria-current="true"]{background:var(--board);color:#fff;border-color:var(--board)}
+.chip.done::after{content:"✓";position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--ok);color:#fff;font-size:11px;line-height:18px;font-family:var(--f-body)}
+
+/* Játéktér */
+.game{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start}
+@media (max-width:860px){.game{grid-template-columns:1fr}}
+.stage{background:var(--board);border-radius:14px;padding:clamp(12px,2.5vw,24px);display:flex;flex-direction:column;gap:16px;box-shadow:0 10px 30px var(--shade)}
+.stage-head{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;color:#e9edf6}
+.stage-head h2{margin:0;font-family:var(--f-display);font-weight:700;font-size:1.5rem}
+.stage-head .q{color:var(--brass);font-family:var(--f-num);font-size:1.1rem}
+.grid6{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(8px,1.5vw,16px)}
+@media (max-width:520px){.grid6{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tile{aspect-ratio:4/3;max-width:100%;perspective:900px;border:0;background:transparent;padding:0}
+.tile .in{position:relative;width:100%;height:100%;transition:transform .55s cubic-bezier(.3,.7,.2,1);transform-style:preserve-3d}
+.tile.open .in{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;border-radius:10px;backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.front{background:var(--board-2);border:2px solid color-mix(in srgb,var(--brass) 55%,transparent)}
+.front span{font-family:var(--f-num);font-size:clamp(2.4rem,7vw,4.6rem);color:var(--brass);font-variant-numeric:tabular-nums;line-height:1}
+.tile:not(.open):hover .front{border-color:var(--brass)}
+.back{background:var(--surface);transform:rotateY(180deg);flex-direction:column}
+.back .emo{font-size:clamp(2.6rem,7vw,4.4rem);line-height:1.1;text-align:center}
+.back img{width:100%;height:100%;object-fit:cover}
+.back .cap{position:absolute;left:0;right:0;bottom:0;background:rgba(15,20,32,.78);color:#fff;font-size:.85rem;padding:4px 8px;text-align:center}
+.back .ord{position:absolute;top:6px;left:8px;font-family:var(--f-num);font-size:.85rem;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.tile .in{transition:none}}
+.callrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;color:#e9edf6}
+.callrow input{width:90px;padding:8px 10px;border-radius:8px;border:1px solid var(--brass);background:var(--board-2);color:#fff;font-family:var(--f-num);font-size:1.2rem;text-align:center}
+.callrow .msg{font-size:.95rem;color:#cdd5e6}
+
+aside.side{display:flex;flex-direction:column;gap:14px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.worth{display:flex;align-items:baseline;gap:10px}
+.worth b{font-family:var(--f-num);font-size:3rem;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
+.teams{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.team{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:6px 8px;border-radius:8px;border:1px solid transparent}
+.team.cur{border-color:var(--brass);background:color-mix(in srgb,var(--brass) 12%,transparent)}
+.team .dot{width:10px;height:10px;border-radius:50%;background:var(--line)}
+.team.cur .dot{background:var(--brass)}
+.team input{border:0;background:transparent;min-width:0;width:100%;font-weight:500;padding:2px}
+.team .pts{font-family:var(--f-num);font-size:1.3rem;font-variant-numeric:tabular-nums;min-width:2ch;text-align:right}
+.team .x{border:0;background:transparent;color:var(--muted);padding:0 4px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row .btn{flex:1 1 auto}
+.toggle{display:flex;gap:8px;align-items:center;font-size:.95rem;color:var(--muted)}
+
+/* Megfejtés */
+.reveal{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:clamp(16px,3vw,28px);display:flex;flex-direction:column;gap:16px}
+.reveal h2{font-family:var(--f-display);font-size:clamp(1.8rem,4vw,2.6rem);margin:0;line-height:1.05;text-wrap:balance}
+.reveal .meta{color:var(--muted)}
+.why{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.why article{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;align-items:start;padding:10px;border:1px solid var(--line);border-radius:10px}
+.why .th{width:72px;height:72px;border-radius:8px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:2.2rem;overflow:hidden}
+.why .th img{width:100%;height:100%;object-fit:cover}
+.why h3{margin:0 0 2px;font-size:1rem}
+.why p{margin:0;font-size:.95rem;color:var(--muted)}
+.reflect{border-left:3px solid var(--brass);padding:4px 0 4px 14px;max-width:70ch}
+.reflect p{margin:4px 0}
+
+/* Nagyító */
+.lb{position:fixed;inset:0;background:rgba(8,12,20,.88);display:flex;align-items:center;justify-content:center;z-index:50;padding:max(24px,env(safe-area-inset-top,0px)) max(24px,env(safe-area-inset-right,0px)) max(24px,env(safe-area-inset-bottom,0px)) max(24px,env(safe-area-inset-left,0px))}
+.lb .big{max-width:min(92vw,900px);max-height:85vh;display:flex;align-items:center;justify-content:center}
+.lb img{max-height:85vh;border-radius:10px}
+.lb .emo{font-size:min(38vw,16rem);line-height:1}
+.lb .close{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));background:var(--surface);border:0;border-radius:8px;padding:6px 12px}
+
+/* Szerkesztő */
+.editor{display:grid;grid-template-columns:260px minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.editor{grid-template-columns:1fr}}
+.plist{display:flex;flex-direction:column;gap:4px;max-height:70vh;overflow:auto}
+.plist button{text-align:left;border:1px solid transparent;background:transparent;padding:6px 10px;border-radius:8px;display:flex;gap:8px}
+.plist button .n{font-family:var(--f-num);color:var(--muted);min-width:2ch;font-variant-numeric:tabular-nums}
+.plist button[aria-current="true"]{border-color:var(--line);background:var(--bg)}
+.form{display:flex;flex-direction:column;gap:14px}
+.fields{display:grid;grid-template-columns:2fr 1fr 1.4fr;gap:10px}
+@media (max-width:600px){.fields{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field input,.field textarea,.field select{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 10px;width:100%}
+.clue{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;padding:12px;border:1px solid var(--line);border-radius:10px}
+.clue .pv{width:96px;height:96px;border-radius:8px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:2.6rem;overflow:hidden}
+.clue .pv img{width:100%;height:100%;object-fit:cover}
+.clue .pv small{font-size:.72rem;line-height:1.2;text-align:center;padding:4px;color:var(--muted)}
+.clue .cf{display:grid;grid-template-columns:1fr 1.5fr;gap:8px;min-width:0}
+.clue .cf .wide{grid-column:1/-1}
+@media (max-width:600px){.clue{grid-template-columns:1fr}.clue .cf{grid-template-columns:1fr}}
+.confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--bad) 12%,transparent)}
+textarea.io{min-height:140px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.8rem}
+.note{color:var(--muted);font-size:.95rem;max-width:70ch}
+.code{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.code b{font-family:var(--f-num);font-size:2.6rem;letter-spacing:.12em;font-variant-numeric:tabular-nums;color:var(--accent);line-height:1}
+.qr{display:flex;justify-content:center}
+.qr img,.qr canvas{background:#fff;padding:8px;border-radius:8px;max-width:100%;height:auto}
+.joinlink{display:flex;gap:6px}
+.joinlink input{flex:1;min-width:0;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:5px 8px;font-size:.85rem}
+.evals{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.evals li{display:grid;grid-template-columns:minmax(0,10rem) minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:8px}
+.evals li.ok{border-color:var(--ok)}
+.evals li.bad{opacity:.7}
+@media (max-width:600px){.evals li{grid-template-columns:1fr}}
+.hint{font-size:.8rem;color:var(--ok);font-weight:700}
+.banner{padding:12px 14px;border-radius:10px;background:var(--surface);border:1px solid var(--line);font-weight:500;font-size:1.05rem}
+.banner.go{background:var(--brass);color:var(--brass-ink);border-color:var(--brass);font-weight:700}
+.pbar{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-weight:700;font-size:1.2rem;flex-wrap:wrap}
+.tile:disabled{cursor:default}
+.tile[data-n]:not(:disabled) .front{border-color:var(--brass);box-shadow:0 0 0 3px color-mix(in srgb,var(--brass) 35%,transparent)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:8px;z-index:60}
+.guide{max-width:72ch}
+.guide h2{font-family:var(--f-display);margin:0 0 6px}
+.guide h3{margin:18px 0 4px}
+.guide p,.guide li{color:var(--ink)}
+</style>
+
+</head><body><div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Ki vagyok <span>én?</span></h1>
+      <p>Történelmi képrejtvény: hat szám, hat talányos kép, egy titokzatos személy.</p>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" id="tab-game" aria-selected="true">Játék</button>
+      <button role="tab" id="tab-edit" aria-selected="false">Szerkesztő</button>
+      <button role="tab" id="tab-help" aria-selected="false">Útmutató</button>
+    </nav>
+  </header>
+
+  <!-- JÁTÉK -->
+  <section id="view-game" style="display:flex;flex-direction:column;gap:18px">
+    <div class="picker" id="picker"></div>
+    <div class="game">
+      <div class="stage">
+        <div class="stage-head">
+          <h2 id="stageTitle">Rejtély</h2>
+          <span class="q" id="stageCount">0 / 6 kép</span>
+        </div>
+        <div class="grid6" id="board"></div>
+        <div class="callrow">
+          <label for="callNum" class="label" style="color:#cdd5e6">Bemondott szám</label>
+          <input id="callNum" inputmode="numeric" maxlength="2" autocomplete="off">
+          <button class="btn small" id="callBtn">Felfed</button>
+          <span class="msg" id="callMsg">Kattints egy számra, vagy írd be a bemondottat.</span>
+        </div>
+      </div>
+      <aside class="side">
+        <div class="panel" id="onlinePanel">
+          <span class="label">Online játék</span>
+          <div id="onOff" style="display:flex;flex-direction:column;gap:10px">
+            <p class="note" style="margin:0">A csapatok telefonon csatlakoznak, ott választanak számot és ott tippelnek.</p>
+            <div class="row"><button class="btn primary" id="onStart">Online játék indítása</button></div>
+            <div class="row" id="onResumeRow" hidden=""><button class="btn" id="onResume">Folytatás</button></div>
+          </div>
+          <div id="onOn" hidden="" style="display:flex;flex-direction:column;gap:10px">
+            <div class="code"><span class="label">Játékkód</span><b id="onCode">----</b></div>
+            <div id="onQr" class="qr"></div>
+            <div class="joinlink"><input id="onLink" readonly="" aria-label="Csatlakozási link"><button class="btn small" id="onCopy">Másolás</button></div>
+            <button class="btn primary" id="onStartRound">Rejtvény indítása</button>
+            <ul class="teams" id="onTeams"></ul>
+            <div class="row"><button class="btn small" id="onSkip">Kör kihagyása</button><button class="btn small bad" id="onEnd">Játék befejezése</button></div>
+            <div id="onEndConfirm" hidden="" class="confirm"><span>Lezárod a játékot? A csapatok kiesnek, az adatok törlődnek.</span><button class="btn small bad" id="onEndYes">Befejezés</button><button class="btn small" id="onEndNo">Mégse</button></div>
+          </div>
+        </div>
+        <div class="panel" id="scorePanel">
+          <span class="label">Ennyit ér most a jó válasz</span>
+          <div class="worth"><b id="worth">6</b><span id="worthTxt">pont</span></div>
+          <div class="row">
+            <button class="btn ok" id="rightBtn">Jó tipp</button>
+            <button class="btn bad" id="wrongBtn">Rossz tipp</button>
+          </div>
+          <button class="btn" id="passBtn">Következő csapat</button>
+        </div>
+        <div class="panel" id="teamsPanel">
+          <span class="label">Csapatok</span>
+          <ul class="teams" id="teams"></ul>
+          <div class="row">
+            <button class="btn small" id="addTeam">+ Csapat</button>
+            <button class="btn small" id="resetScores">Pontok nullázása</button>
+          </div>
+          <div id="resetConfirm" hidden="" class="confirm"><span>Minden pont törlődik.</span><button class="btn small bad" id="resetYes">Nullázás</button><button class="btn small" id="resetNo">Mégse</button></div>
+        </div>
+        <div class="panel">
+          <label class="toggle"><input type="checkbox" id="showCaps"> Képaláírások mutatása (könnyítés)</label>
+          <div class="row">
+            <button class="btn small" id="randomBtn">Véletlen rejtély</button>
+            <button class="btn small" id="giveUp">Megfejtés</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+    <section class="reveal" id="reveal" hidden=""></section>
+  </section>
+
+  <!-- TELEFONOS CSATLAKOZÁS -->
+  <section id="view-join" hidden="">
+    <div class="panel" id="joinForm" style="max-width:440px">
+      <span class="label">Csatlakozás a játékhoz</span>
+      <div class="field"><label class="label" for="jCode">Játékkód</label><input id="jCode" inputmode="numeric" maxlength="4" autocomplete="off"></div>
+      <div class="field"><label class="label" for="jName">Csapatnév</label><input id="jName" maxlength="24" autocomplete="off"></div>
+      <button class="btn primary" id="jGo">Csatlakozás</button>
+      <p class="note" id="jMsg" style="margin:0"></p>
+    </div>
+    <div id="pView" hidden="" style="display:flex;flex-direction:column;gap:14px">
+      <div class="pbar"><span id="pTeam"></span><span class="label" id="pCode"></span></div>
+      <div class="banner" id="pBanner"></div>
+      <div class="stage"><div class="grid6" id="pBoard"></div></div>
+      <div class="panel" id="pGuess" hidden="">
+        <span class="label">Tipp</span>
+        <p class="note" id="pWorth" style="margin:0"></p>
+        <div class="field"><label class="label" for="pText">Ki a titokzatos személy?</label><input id="pText" maxlength="60" autocomplete="off"></div>
+        <button class="btn primary" id="pSend">Tipp leadása</button>
+        <div id="pConfirm" hidden="" class="confirm"><span id="pConfTxt">Csak egyszer tippelhettek. Leadjátok?</span><button class="btn small primary" id="pYes">Igen, leadjuk</button><button class="btn small" id="pNo">Mégse</button></div>
+      </div>
+      <section class="reveal" id="pSol" hidden=""></section>
+      <div class="panel"><span class="label">Állás</span><ul class="teams" id="pScores"></ul></div>
+    </div>
+  </section>
+
+  <!-- SZERKESZTŐ -->
+  <section id="view-edit" hidden="">
+    <div class="editor">
+      <div class="panel">
+        <span class="label">Személyek</span>
+        <div class="plist" id="plist"></div>
+        <button class="btn primary" id="newP">+ Új személy</button>
+      </div>
+      <div class="form" id="form"></div>
+    </div>
+    <div class="panel" style="margin-top:20px">
+      <span class="label">Mentés és megosztás</span>
+      <p class="note">A változtatások automatikusan mentődnek ebben a böngészőben. A diákokhoz úgy jut el a saját képes készlet, ha önálló HTML-be mented, és azt töltöd fel a honlapodra: abban minden kép benne van, és az lesz az alapkészlete. A mentés a letöltött fájlból megnyitott appban működik, itt a Claude-oldalon a böngésző nem engedi.</p>
+      <p class="note" id="usage"></p>
+      <div class="row">
+        <button class="btn primary" id="expHtml">Önálló HTML mentése a képekkel</button>
+      </div>
+      <div class="row">
+        <button class="btn" id="expShow">Készlet exportálása</button>
+        <button class="btn" id="expDl">Letöltés .json fájlba</button>
+        <label class="btn" for="impFile" style="text-align:center">Importálás fájlból</label>
+        <input type="file" id="impFile" accept=".json,application/json" hidden="">
+        <button class="btn" id="resetDeck">Alapkészlet visszaállítása</button>
+      </div>
+      <div id="deckConfirm" hidden="" class="confirm"><span>A saját személyeid törlődnek, az alapkészlet tölt be.</span><button class="btn small bad" id="deckYes">Visszaállítás</button><button class="btn small" id="deckNo">Mégse</button></div>
+      <textarea class="io field" id="io" hidden="" placeholder="Ide illeszd be az importálandó JSON-t, majd nyomd meg a Betöltés gombot." style="border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px"></textarea>
+      <div class="row" id="ioBtns" hidden="">
+        <button class="btn" id="copyIo">Másolás</button>
+        <button class="btn primary" id="loadIo">Betöltés a mezőből</button>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:20px">
+      <span class="label">Online játék beállítása</span>
+      <p class="note" style="margin:0">Egyszer kell elvégezni, a lépéseket az Útmutató írja le. Ide a Firebase-konzolból kimásolt <code>firebaseConfig</code> részt illeszd be.</p>
+      <textarea class="io" id="fbCfg" placeholder="const firebaseConfig = { apiKey: &quot;…&quot;, authDomain: &quot;…&quot;, databaseURL: &quot;…&quot;, … };" style="border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px;min-height:110px"></textarea>
+      <div class="row"><button class="btn primary" id="fbSave">Beállítás mentése</button><button class="btn" id="fbTest">Kapcsolat tesztelése</button></div>
+      <p class="note" id="fbMsg" style="margin:0"></p>
+      <span class="label">Biztonsági szabályok (Realtime Database → Rules)</span>
+      <textarea class="io" id="fbRules" readonly="" style="border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px;min-height:180px"></textarea>
+      <div class="row"><button class="btn small" id="fbRulesCopy">Szabályok másolása</button></div>
+    </div>
+  </section>
+
+  <!-- ÚTMUTATÓ -->
+  <section id="view-help" hidden="" class="panel guide">
+    <h2>Tanári útmutató</h2>
+    <h3>Menete</h3>
+    <ol>
+      <li>Válassz rejtélyt a számozott gombokkal (a nevek nem látszanak, így kivetíthető). Minden körben hat új véletlen szám takarja a képeket.</li>
+      <li>A soron lévő csapat bemond egy számot; kattints rá, vagy írd be. Előbukkan egy talányos kép.</li>
+      <li>A csapat tippelhet. <b>Jó tipp</b>: annyi pontot kap, amennyit a panel mutat (1 kép után 6 pont, 6 kép után 1). <b>Rossz tipp</b> vagy <b>Következő csapat</b>: a szó továbbmegy.</li>
+      <li>A megfejtésnél minden kép mellett ott a kapcsolat magyarázata.</li>
+    </ol>
+    <h3>Miért működik</h3>
+    <p>A képek nem a személyt ábrázolják, hanem tetteihez, korához, utóéletéhez kötődő asszociációkat. A tippnek így tudásból kell következnie, nem arcfelismerésből. A pontozás jutalmazza a merész, de megalapozott következtetést, a rossz tipp viszont átadja a szót: érdemes mérlegelni.</p>
+    <h3>Ne hagyd ki a zárást</h3>
+    <p>A megfejtés alatti kérdésekkel a csapatok kimondják, melyik kép döntött és miért. Ez a játék tanulási értéke: a kapcsolatok megfogalmazása rögzíti a tartalmat, és látszik, ki talált rá tudásból, ki szerencséből.</p>
+    <h3>Saját rejtvények</h3>
+    <p>A Szerkesztőben új személyt vehetsz fel, minden képhez írhatsz emojit vagy tölthetsz fel saját képet (automatikusan kicsinyíti). A „Hat kép feltöltése egyszerre” gombbal egy személy összes képe egy lépésben bekerül, ha a fájlokat 1-től 6-ig számozod. A kész készletet az „Önálló HTML mentése a képekkel” gombbal egyetlen fájlba mented, ezt töltsd fel a honlapodra. A rövid képaláírás alapból rejtett, könnyítésként bekapcsolható. Diákok is készíthetnek rejtvényt egymásnak: ez a legmélyebb feladat, mert a jó talányhoz pontos tudás kell.</p>
+    <h3>Online játék: menete</h3>
+    <ol>
+      <li>A Játék fülön nyomd meg az „Online játék indítása” gombot. Megjelenik egy négyjegyű kód és egy QR-kód.</li>
+      <li>A csapatok beolvassák a QR-kódot (vagy megnyitják a linket és beírják a kódot), majd megadják a csapatnevet. Fiók nem kell.</li>
+      <li>Ha mindenki bent van: „Rejtvény indítása”. A csatlakozás sorrendjében mindig egy csapat választ számot a telefonján; a kép a kivetítőn és a telefonokon is megjelenik.</li>
+      <li>Minden csapat egyszer tippelhet a rejtvény során, bármikor az első kép után. A pontérték: 7 mínusz az akkor fent lévő képek száma. Aki tippelt, kimarad a számválasztásból.</li>
+      <li>A tippek a kivetítőn csak a „Megfejtés” után látszanak, hogy ne lehessen lemásolni őket. Ott jelölöd jónak vagy rossznak, a pontokat az app jóváírja. Az „egyezik a névvel” jelzés csak javaslat.</li>
+      <li>Ha egy csapat nem választ, a „Kör kihagyása” továbbadja a szót. Óra végén nyomd meg a „Játék befejezése” gombot: ez törli a játék adatait.</li>
+    </ol>
+    <h3>Online játék: egyszeri beállítás (kb. 15 perc)</h3>
+    <ol>
+      <li>Nyisd meg a <b>console.firebase.google.com</b> oldalt a Google-fiókoddal, és hozz létre egy projektet (pl. „ki-vagyok-en”). A Google Analytics kikapcsolható.</li>
+      <li>Bal menü: <b>Build → Authentication → Get started → Sign-in method → Anonymous</b>, kapcsold be, mentsd.</li>
+      <li><b>Build → Realtime Database → Create database</b>. Helynek válaszd a <b>Belgium (europe-west1)</b> régiót, induláskor a <b>locked mode</b>-ot.</li>
+      <li>A Realtime Database <b>Rules</b> fülén cseréld le a szöveget a Szerkesztő alján lévő biztonsági szabályokra, majd <b>Publish</b>.</li>
+      <li>Fogaskerék → <b>Project settings → General → Your apps</b>: kattints a <b>&lt;/&gt;</b> (Web) ikonra, adj nevet, és regisztráld. Másold ki a <code>firebaseConfig = { … }</code> részt. Ellenőrizd, hogy van benne <code>databaseURL</code>.</li>
+      <li>Illeszd be a Szerkesztő alján, nyomd meg a „Beállítás mentése”, majd a „Kapcsolat tesztelése” gombot.</li>
+      <li>Mentsd el az önálló HTML-t, és töltsd fel a honlapodra. Az online mód csak ott működik, mert a telefonoknak egy webcímről kell elérniük az appot.</li>
+    </ol>
+    <p class="note">Óra előtt próbáld ki két telefonnal. Az ingyenes Firebase-csomag egy osztálynyi játékra bőven elég. Személyes adat nem kerül a rendszerbe, csak csapatnevek és tippek.</p>
+  </section>
+</div>
+
+<div class="lb" id="lb" hidden=""><button class="close" id="lbClose">Bezárás</button><div class="big" id="lbBig"></div></div>
+<div class="toast" id="toast" hidden=""></div>
+
+<script id="deckdata" type="application/json">[{"id":"istvan","name":"Szent István","years":"uralk. 997/1000–1038","period":"Árpád-kor","clues":[{"img":"👑","label":"Korona","note":"1000/1001 fordulóján királlyá koronázták; a koronát a hagyomány szerint II. Szilveszter pápától kapta."},{"img":"⚔️","label":"Lázadó rokon","note":"Legyőzte Koppányt, aki a senioratus elve alapján igényelte a hatalmat; testét felnégyelték."},{"img":"⛪🔟","label":"Tíz templom","note":"A hagyomány szerint tíz egyházmegyét szervezett, élükön Esztergom érsekségével."},{"img":"📜","label":"Tanítás a fiúnak","note":"Az Intelmek fiához, Imre herceghez szólnak az uralkodás erényeiről."},{"img":"🏰","label":"Vár és terület","note":"A vármegyerendszer kiépítése: ispánok vezette királyi várak és birtokaik."},{"img":"💧","label":"Keresztvíz","note":"Születési neve Vajk volt, az István nevet a keresztségben kapta."}]},{"id":"bela4","name":"IV. Béla","years":"uralk. 1235–1270","period":"Árpád-kor","clues":[{"img":"🏹","label":"Íjászok keletről","note":"Uralkodása alatt zajlott a tatárjárás (1241–42), a muhi csatavereséggel."},{"img":"🏝️","label":"Sziget","note":"A tatárok elől Dalmáciába, Trau (Trogir) melletti szigetre menekült."},{"img":"🏰","label":"Kőfalak","note":"A pusztítás után kővárak építését szorgalmazta a földvárak helyett."},{"img":"2️⃣🏠","label":"Kettes ház","note":"„Második honalapítóként” emlegetik az ország újjáépítése miatt."},{"img":"🙏","label":"Fogadalom","note":"Leányát, Margitot fogadalomból Istennek ajánlotta; róla kapta nevét a Margit-sziget."},{"img":"⛺","label":"Sátrak","note":"Behívta a kunokat (Kötöny népét), később a tatárjárás után újra betelepítette őket."}]},{"id":"lajos1","name":"Nagy Lajos","years":"uralk. 1342–1382","period":"Anjou-kor","clues":[{"img":"🍫","label":"Nápolyi szelet","note":"Két nápolyi hadjáratot vezetett (1347–48, 1350) öccse, András meggyilkolása miatt."},{"img":"🛡️💪","label":"Erős vitéz","note":"Toldi Miklós, Arany János hőse; valóságos alakja Lajos korában szolgált."},{"img":"🦅👑","label":"Fehér sas koronával","note":"1370-től lengyel király is volt (perszonálunió); a fehér sas a lengyel címer."},{"img":"🌊🌊🌊","label":"Három hullám","note":"A hagyomány szerint országát „három tenger mosta” — erős túlzás, de ma is ismert szólás."},{"img":"🎓","label":"Egyetem","note":"1367-ben alapította a pécsi egyetemet, az első magyarországit."},{"img":"📜","label":"Törvény 1351","note":"Az 1351-es törvények: ősiség, egységes kilenced, „egy és ugyanazon nemesi szabadság”."}]},{"id":"hunyadi","name":"Hunyadi János","years":"kormányzó 1446–1452, †1456","period":"Hunyadiak kora","clues":[{"img":"🔔","label":"Délben szól","note":"A déli harangszót III. Kallixtusz pápa rendelte el imára; később Nándorfehérvár emlékévé vált."},{"img":"🏰","label":"Ostromlott vár","note":"1456-ban megvédte Nándorfehérvárt II. Mehmed seregével szemben."},{"img":"🌊⚔️","label":"Csata a tengerparton","note":"1444-ben Várnánál, a Fekete-tenger partján vereség, I. Ulászló király elesett."},{"img":"🏛️","label":"Hivatal király nélkül","note":"1446-tól kormányzó V. László kiskorúsága idején."},{"img":"👦👦","label":"Két fiú","note":"Fiai: Lászlót 1457-ben lefejezték, Mátyásból király lett."},{"img":"❄️","label":"Tél","note":"Az 1443–44-es „hosszú hadjárat” a téli hegyekben zajlott."}]},{"id":"matyas","name":"Hunyadi Mátyás","years":"uralk. 1458–1490","period":"Hunyadiak kora","clues":[{"img":"📚","label":"Kódexek","note":"Budai könyvtára, a Bibliotheca Corviniana kódexei a Corvinák."},{"img":"🐦💍","label":"Madár gyűrűvel","note":"Címerállata a csőrében gyűrűt tartó holló (corvus), innen a Corvinus név."},{"img":"🖤⚔️","label":"Fekete fegyver","note":"Állandó zsoldoshadserege, a fekete sereg."},{"img":"🎭","label":"Álruha","note":"A népmesékben álruhában járja az országot."},{"img":"⚖️","label":"Mérleg","note":"„Meghalt Mátyás király, oda az igazság” — az igazságos király képe."},{"img":"💍🇮🇹","label":"Itáliai házasság","note":"Feleségével, Aragóniai Beatrixszal (1476) erősödött az itáliai reneszánsz hatás."}]},{"id":"bethlen","name":"Bethlen Gábor","years":"fejedelem 1613–1629","period":"Kora újkor","clues":[{"img":"🎓","label":"Kollégium","note":"Megalapította a gyulafehérvári kollégiumot, külföldi egyetemekre küldte a diákokat."},{"img":"💰","label":"Kincstár","note":"Merkantilista gazdaságpolitika, állami kereskedelmi monopóliumok."},{"img":"👑❌","label":"Korona, mégsem","note":"1620-ban királlyá választották, de nem koronáztatta meg magát."},{"img":"⚔️🔟🔟🔟","label":"Hosszú háború","note":"A harmincéves háborúban a protestáns oldalon vezetett hadjáratokat a Habsburgok ellen."},{"img":"⛪","label":"Hit","note":"Református fejedelem, a protestáns ügy támogatója."},{"img":"✨🏔️","label":"Arany a hegyek közt","note":"Uralkodását Erdély „aranykorának” nevezik."}]},{"id":"rakoczi","name":"II. Rákóczi Ferenc","years":"vezérlő fejedelem 1704–1711","period":"Kora újkor","clues":[{"img":"🏳️","label":"Zászló","note":"Zászlaján: Cum Deo pro Patria et Libertate — Istennel a hazáért és a szabadságért."},{"img":"⛔👑","label":"Elutasított korona","note":"Az 1707-es ónodi országgyűlés kimondta a Habsburg-ház trónfosztását."},{"img":"🏰👩","label":"Vár és asszony","note":"Munkács várát anyja, Zrínyi Ilona három évig védte (1685–88)."},{"img":"🐎","label":"Lovasok","note":"Szabadságharcának katonái a kurucok."},{"img":"✉️","label":"Levelek","note":"Kamarása, Mikes Kelemen Törökországi levelei az emigráció krónikája."},{"img":"🌙","label":"Félhold","note":"Száműzetésben, a törökországi Rodostóban halt meg 1735-ben."}]},{"id":"mariaterezia","name":"Mária Terézia","years":"uralk. 1740–1780","period":"Felvilágosodás kora","clues":[{"img":"👶🔢","label":"Sok gyerek","note":"Tizenhat gyermeket szült; dinasztikus házasságokkal kötötte őket Európa udvaraihoz."},{"img":"📚","label":"Iskola","note":"Az 1777-es Ratio Educationis egységesítette a magyarországi oktatást."},{"img":"🌾📜","label":"Jobbágyrendelet","note":"Az 1767-es úrbéri rendelet szabályozta a jobbágyterheket."},{"img":"🩸⚔️","label":"Élet és vér","note":"1741, Pozsony: a rendek „életünket és vérünket” felajánlással álltak mellé."},{"img":"🗺️✂️","label":"Elveszett tartomány","note":"Az örökösödési háborúban Sziléziát elveszítette II. Frigyes porosz királlyal szemben."},{"img":"🚧","label":"Határ a határon","note":"Az 1754-es vámrendelet kettős vámhatárt vont, Magyarországot agrárszerepbe szorítva."}]},{"id":"szechenyi","name":"Széchenyi István","years":"1791–1860","period":"Reformkor","clues":[{"img":"🌉","label":"Híd","note":"Kezdeményezte a Lánchíd építését; a hídvámot a nemeseknek is fizetniük kellett."},{"img":"💳","label":"Kártya","note":"Első nagy műve a Hitel (1830)."},{"img":"🐎🏁","label":"Verseny","note":"Angol mintára lóversenyeket honosított meg a lótenyésztés javítására."},{"img":"🏛️","label":"Akadémia","note":"1825-ben egyévi jövedelmét ajánlotta fel a tudós társaság (MTA) alapítására."},{"img":"🚢","label":"Gőzös","note":"Szorgalmazta a dunai gőzhajózást és az Al-Duna szabályozását."},{"img":"🌊","label":"Folyó","note":"A Tisza-szabályozás egyik kezdeményezője."}]},{"id":"kossuth","name":"Kossuth Lajos","years":"1802–1894","period":"Reformkor és 1848–49","clues":[{"img":"📰","label":"Újság","note":"1841-től a Pesti Hírlap szerkesztőjeként vezércikkekkel formálta a közvéleményt."},{"img":"⛓️📕","label":"Börtön és könyv","note":"1837-ben letartóztatták; a börtönben angolul tanult."},{"img":"💵","label":"Bankjegy","note":"Pénzügyminiszterként adták ki a forradalmi papírpénzt, a „Kossuth-bankót”."},{"img":"🗣️","label":"Beszéd","note":"1848. március 3-i pozsonyi felirati javaslata indította el az átalakulást."},{"img":"🛡️","label":"Védelem","note":"Az Országos Honvédelmi Bizottmány elnöke, 1849-ben kormányzó-elnök."},{"img":"🎩","label":"Kalap","note":"Amerikai útja (1851–52) idején divatba jött az ún. Kossuth-kalap."}]},{"id":"petofi","name":"Petőfi Sándor","years":"1823–1849","period":"Reformkor és 1848–49","clues":[{"img":"☕","label":"Kávéház","note":"A Pilvax kávéház a márciusi ifjak találkozóhelye volt."},{"img":"🎤","label":"Szavalat","note":"1848. március 15-én elszavalta a Nemzeti dalt."},{"img":"🌹","label":"Rózsa","note":"Felesége, Szendrey Júlia, a „Szeptember végén” címzettje."},{"img":"🎖️","label":"Segédtiszt","note":"Bem tábornok segédtisztje volt az erdélyi hadjáratban."},{"img":"🌾","label":"Síkság","note":"Az Alföld költője."},{"img":"🔍","label":"Nyomozás","note":"Segesvárnál tűnt el 1849 júliusában; sírját sosem azonosították hitelesen."}]},{"id":"deak","name":"Deák Ferenc","years":"1803–1876","period":"Kiegyezés kora","clues":[{"img":"🐣","label":"Tojás","note":"Az 1865-ös Húsvéti cikk jelezte a kiegyezési szándékot."},{"img":"🦉","label":"Bagoly","note":"„A haza bölcse.”"},{"img":"🤝","label":"Kézfogás","note":"Az 1867-es kiegyezés fő magyar formálója."},{"img":"🕊️","label":"Galamb","note":"Az ’50-es években a passzív ellenállás jelképes alakja."},{"img":"⚖️","label":"Mérleg","note":"1848-ban a Batthyány-kormány igazságügy-minisztere."},{"img":"👑","label":"Korona","note":"1867-ben Ferenc Józsefet magyar királlyá koronázták a kiegyezés részeként."}]}]</script>
+<script id="fbconfig" type="application/json">{"apiKey":"AIzaSyBKORQSuH36DA0YdpdctNugEOFUu3MoaiA","authDomain":"ki-vagyok-en-76a5b.firebaseapp.com","databaseURL":"https://ki-vagyok-en-76a5b-default-rtdb.europe-west1.firebasedatabase.app","projectId":"ki-vagyok-en-76a5b","storageBucket":"ki-vagyok-en-76a5b.firebasestorage.app","messagingSenderId":"940831991394","appId":"1:940831991394:web:ac8c943d69fab63179933b","measurementId":"G-KXY70Z4ZCT"}</script>
+<script>
+const PRISTINE=document.documentElement.outerHTML;
+const DEFAULT_DECK = [
+ {id:"istvan",name:"Szent István",years:"uralk. 997/1000–1038",period:"Árpád-kor",clues:[
+  {img:"👑",label:"Korona",note:"1000/1001 fordulóján királlyá koronázták; a koronát a hagyomány szerint II. Szilveszter pápától kapta."},
+  {img:"⚔️",label:"Lázadó rokon",note:"Legyőzte Koppányt, aki a senioratus elve alapján igényelte a hatalmat; testét felnégyelték."},
+  {img:"⛪🔟",label:"Tíz templom",note:"A hagyomány szerint tíz egyházmegyét szervezett, élükön Esztergom érsekségével."},
+  {img:"📜",label:"Tanítás a fiúnak",note:"Az Intelmek fiához, Imre herceghez szólnak az uralkodás erényeiről."},
+  {img:"🏰",label:"Vár és terület",note:"A vármegyerendszer kiépítése: ispánok vezette királyi várak és birtokaik."},
+  {img:"💧",label:"Keresztvíz",note:"Születési neve Vajk volt, az István nevet a keresztségben kapta."}]},
+ {id:"bela4",name:"IV. Béla",years:"uralk. 1235–1270",period:"Árpád-kor",clues:[
+  {img:"🏹",label:"Íjászok keletről",note:"Uralkodása alatt zajlott a tatárjárás (1241–42), a muhi csatavereséggel."},
+  {img:"🏝️",label:"Sziget",note:"A tatárok elől Dalmáciába, Trau (Trogir) melletti szigetre menekült."},
+  {img:"🏰",label:"Kőfalak",note:"A pusztítás után kővárak építését szorgalmazta a földvárak helyett."},
+  {img:"2️⃣🏠",label:"Kettes ház",note:"„Második honalapítóként” emlegetik az ország újjáépítése miatt."},
+  {img:"🙏",label:"Fogadalom",note:"Leányát, Margitot fogadalomból Istennek ajánlotta; róla kapta nevét a Margit-sziget."},
+  {img:"⛺",label:"Sátrak",note:"Behívta a kunokat (Kötöny népét), később a tatárjárás után újra betelepítette őket."}]},
+ {id:"lajos1",name:"Nagy Lajos",years:"uralk. 1342–1382",period:"Anjou-kor",clues:[
+  {img:"🍫",label:"Nápolyi szelet",note:"Két nápolyi hadjáratot vezetett (1347–48, 1350) öccse, András meggyilkolása miatt."},
+  {img:"🛡️💪",label:"Erős vitéz",note:"Toldi Miklós, Arany János hőse; valóságos alakja Lajos korában szolgált."},
+  {img:"🦅👑",label:"Fehér sas koronával",note:"1370-től lengyel király is volt (perszonálunió); a fehér sas a lengyel címer."},
+  {img:"🌊🌊🌊",label:"Három hullám",note:"A hagyomány szerint országát „három tenger mosta” — erős túlzás, de ma is ismert szólás."},
+  {img:"🎓",label:"Egyetem",note:"1367-ben alapította a pécsi egyetemet, az első magyarországit."},
+  {img:"📜",label:"Törvény 1351",note:"Az 1351-es törvények: ősiség, egységes kilenced, „egy és ugyanazon nemesi szabadság”."}]},
+ {id:"hunyadi",name:"Hunyadi János",years:"kormányzó 1446–1452, †1456",period:"Hunyadiak kora",clues:[
+  {img:"🔔",label:"Délben szól",note:"A déli harangszót III. Kallixtusz pápa rendelte el imára; később Nándorfehérvár emlékévé vált."},
+  {img:"🏰",label:"Ostromlott vár",note:"1456-ban megvédte Nándorfehérvárt II. Mehmed seregével szemben."},
+  {img:"🌊⚔️",label:"Csata a tengerparton",note:"1444-ben Várnánál, a Fekete-tenger partján vereség, I. Ulászló király elesett."},
+  {img:"🏛️",label:"Hivatal király nélkül",note:"1446-tól kormányzó V. László kiskorúsága idején."},
+  {img:"👦👦",label:"Két fiú",note:"Fiai: Lászlót 1457-ben lefejezték, Mátyásból király lett."},
+  {img:"❄️",label:"Tél",note:"Az 1443–44-es „hosszú hadjárat” a téli hegyekben zajlott."}]},
+ {id:"matyas",name:"Hunyadi Mátyás",years:"uralk. 1458–1490",period:"Hunyadiak kora",clues:[
+  {img:"📚",label:"Kódexek",note:"Budai könyvtára, a Bibliotheca Corviniana kódexei a Corvinák."},
+  {img:"🐦💍",label:"Madár gyűrűvel",note:"Címerállata a csőrében gyűrűt tartó holló (corvus), innen a Corvinus név."},
+  {img:"🖤⚔️",label:"Fekete fegyver",note:"Állandó zsoldoshadserege, a fekete sereg."},
+  {img:"🎭",label:"Álruha",note:"A népmesékben álruhában járja az országot."},
+  {img:"⚖️",label:"Mérleg",note:"„Meghalt Mátyás király, oda az igazság” — az igazságos király képe."},
+  {img:"💍🇮🇹",label:"Itáliai házasság",note:"Feleségével, Aragóniai Beatrixszal (1476) erősödött az itáliai reneszánsz hatás."}]},
+ {id:"bethlen",name:"Bethlen Gábor",years:"fejedelem 1613–1629",period:"Kora újkor",clues:[
+  {img:"🎓",label:"Kollégium",note:"Megalapította a gyulafehérvári kollégiumot, külföldi egyetemekre küldte a diákokat."},
+  {img:"💰",label:"Kincstár",note:"Merkantilista gazdaságpolitika, állami kereskedelmi monopóliumok."},
+  {img:"👑❌",label:"Korona, mégsem",note:"1620-ban királlyá választották, de nem koronáztatta meg magát."},
+  {img:"⚔️🔟🔟🔟",label:"Hosszú háború",note:"A harmincéves háborúban a protestáns oldalon vezetett hadjáratokat a Habsburgok ellen."},
+  {img:"⛪",label:"Hit",note:"Református fejedelem, a protestáns ügy támogatója."},
+  {img:"✨🏔️",label:"Arany a hegyek közt",note:"Uralkodását Erdély „aranykorának” nevezik."}]},
+ {id:"rakoczi",name:"II. Rákóczi Ferenc",years:"vezérlő fejedelem 1704–1711",period:"Kora újkor",clues:[
+  {img:"🏳️",label:"Zászló",note:"Zászlaján: Cum Deo pro Patria et Libertate — Istennel a hazáért és a szabadságért."},
+  {img:"⛔👑",label:"Elutasított korona",note:"Az 1707-es ónodi országgyűlés kimondta a Habsburg-ház trónfosztását."},
+  {img:"🏰👩",label:"Vár és asszony",note:"Munkács várát anyja, Zrínyi Ilona három évig védte (1685–88)."},
+  {img:"🐎",label:"Lovasok",note:"Szabadságharcának katonái a kurucok."},
+  {img:"✉️",label:"Levelek",note:"Kamarása, Mikes Kelemen Törökországi levelei az emigráció krónikája."},
+  {img:"🌙",label:"Félhold",note:"Száműzetésben, a törökországi Rodostóban halt meg 1735-ben."}]},
+ {id:"mariaterezia",name:"Mária Terézia",years:"uralk. 1740–1780",period:"Felvilágosodás kora",clues:[
+  {img:"👶🔢",label:"Sok gyerek",note:"Tizenhat gyermeket szült; dinasztikus házasságokkal kötötte őket Európa udvaraihoz."},
+  {img:"📚",label:"Iskola",note:"Az 1777-es Ratio Educationis egységesítette a magyarországi oktatást."},
+  {img:"🌾📜",label:"Jobbágyrendelet",note:"Az 1767-es úrbéri rendelet szabályozta a jobbágyterheket."},
+  {img:"🩸⚔️",label:"Élet és vér",note:"1741, Pozsony: a rendek „életünket és vérünket” felajánlással álltak mellé."},
+  {img:"🗺️✂️",label:"Elveszett tartomány",note:"Az örökösödési háborúban Sziléziát elveszítette II. Frigyes porosz királlyal szemben."},
+  {img:"🚧",label:"Határ a határon",note:"Az 1754-es vámrendelet kettős vámhatárt vont, Magyarországot agrárszerepbe szorítva."}]},
+ {id:"szechenyi",name:"Széchenyi István",years:"1791–1860",period:"Reformkor",clues:[
+  {img:"🌉",label:"Híd",note:"Kezdeményezte a Lánchíd építését; a hídvámot a nemeseknek is fizetniük kellett."},
+  {img:"💳",label:"Kártya",note:"Első nagy műve a Hitel (1830)."},
+  {img:"🐎🏁",label:"Verseny",note:"Angol mintára lóversenyeket honosított meg a lótenyésztés javítására."},
+  {img:"🏛️",label:"Akadémia",note:"1825-ben egyévi jövedelmét ajánlotta fel a tudós társaság (MTA) alapítására."},
+  {img:"🚢",label:"Gőzös",note:"Szorgalmazta a dunai gőzhajózást és az Al-Duna szabályozását."},
+  {img:"🌊",label:"Folyó",note:"A Tisza-szabályozás egyik kezdeményezője."}]},
+ {id:"kossuth",name:"Kossuth Lajos",years:"1802–1894",period:"Reformkor és 1848–49",clues:[
+  {img:"📰",label:"Újság",note:"1841-től a Pesti Hírlap szerkesztőjeként vezércikkekkel formálta a közvéleményt."},
+  {img:"⛓️📕",label:"Börtön és könyv",note:"1837-ben letartóztatták; a börtönben angolul tanult."},
+  {img:"💵",label:"Bankjegy",note:"Pénzügyminiszterként adták ki a forradalmi papírpénzt, a „Kossuth-bankót”."},
+  {img:"🗣️",label:"Beszéd",note:"1848. március 3-i pozsonyi felirati javaslata indította el az átalakulást."},
+  {img:"🛡️",label:"Védelem",note:"Az Országos Honvédelmi Bizottmány elnöke, 1849-ben kormányzó-elnök."},
+  {img:"🎩",label:"Kalap",note:"Amerikai útja (1851–52) idején divatba jött az ún. Kossuth-kalap."}]},
+ {id:"petofi",name:"Petőfi Sándor",years:"1823–1849",period:"Reformkor és 1848–49",clues:[
+  {img:"☕",label:"Kávéház",note:"A Pilvax kávéház a márciusi ifjak találkozóhelye volt."},
+  {img:"🎤",label:"Szavalat",note:"1848. március 15-én elszavalta a Nemzeti dalt."},
+  {img:"🌹",label:"Rózsa",note:"Felesége, Szendrey Júlia, a „Szeptember végén” címzettje."},
+  {img:"🎖️",label:"Segédtiszt",note:"Bem tábornok segédtisztje volt az erdélyi hadjáratban."},
+  {img:"🌾",label:"Síkság",note:"Az Alföld költője."},
+  {img:"🔍",label:"Nyomozás",note:"Segesvárnál tűnt el 1849 júliusában; sírját sosem azonosították hitelesen."}]},
+ {id:"deak",name:"Deák Ferenc",years:"1803–1876",period:"Kiegyezés kora",clues:[
+  {img:"🐣",label:"Tojás",note:"Az 1865-ös Húsvéti cikk jelezte a kiegyezési szándékot."},
+  {img:"🦉",label:"Bagoly",note:"„A haza bölcse.”"},
+  {img:"🤝",label:"Kézfogás",note:"Az 1867-es kiegyezés fő magyar formálója."},
+  {img:"🕊️",label:"Galamb",note:"Az ’50-es években a passzív ellenállás jelképes alakja."},
+  {img:"⚖️",label:"Mérleg",note:"1848-ban a Batthyány-kormány igazságügy-minisztere."},
+  {img:"👑",label:"Korona",note:"1867-ben Ferenc Józsefet magyar királlyá koronázták a kiegyezés részeként."}]}
+];
+
+const KEY="kivagyok.deck.v1", KEY_S="kivagyok.state.v1";
+const $=s=>document.querySelector(s);
+const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}};
+let EMBED=null; try{EMBED=JSON.parse(document.getElementById("deckdata").textContent)}catch(e){}
+const BASE=Array.isArray(EMBED)&&EMBED.length?EMBED:DEFAULT_DECK;
+const idb={db:null,
+  open(){return new Promise(r=>{try{const q=indexedDB.open("kivagyok",1);q.onupgradeneeded=()=>q.result.createObjectStore("kv");q.onsuccess=()=>{this.db=q.result;r(true)};q.onerror=()=>r(false);q.onblocked=()=>r(false)}catch(e){r(false)}})},
+  get(k){return new Promise(r=>{if(!this.db)return r(null);try{const q=this.db.transaction("kv").objectStore("kv").get(k);q.onsuccess=()=>r(q.result??null);q.onerror=()=>r(null)}catch(e){r(null)}})},
+  set(k,v){return new Promise(r=>{if(!this.db)return r(false);try{const t=this.db.transaction("kv","readwrite");t.objectStore("kv").put(v,k);t.oncomplete=()=>r(true);t.onerror=t.onabort=()=>r(false)}catch(e){r(false)}})}};
+let deck=structuredClone(BASE);
+let S=Object.assign({teams:[{name:"1. csapat",pts:0},{name:"2. csapat",pts:0}],cur:0,done:[],caps:false},store.get(KEY_S)||{});
+let R=null; // aktuális kör
+const isImg=v=>typeof v==="string"&&/^(data:|https?:\/\/)/i.test(v);
+const isUrl=v=>typeof v==="string"&&/^https?:\/\//i.test(v);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const vis=v=>isImg(v)?`<img src="${esc(v)}" alt="">`:`<span class="emo">${esc(v||"?")}</span>`;
+function saveS(){store.set(KEY_S,S)}
+function saveDeck(){clearTimeout(saveDeck.t);saveDeck.t=setTimeout(async()=>{
+  const ok=await idb.set(KEY,deck);
+  if(ok){try{localStorage.removeItem(KEY)}catch(e){}}
+  else if(!store.set(KEY,deck))toast("Nem sikerült menteni: a böngésző tárhelye megtelt. Mentsd el a készletet önálló HTML-be vagy JSON-be.");
+  renderUsage()},350)}
+function renderUsage(){const el=$("#usage");if(!el)return;
+  const n=deck.reduce((a,p)=>a+p.clues.filter(c=>isImg(c.img)).length,0);
+  const mb=(JSON.stringify(deck).length/1048576).toFixed(1);
+  el.textContent=`Saját képek: ${n} db · a készlet mérete kb. ${mb} MB${idb.db?"":" · figyelem: csak a kisebb, kb. 5 MB-os tárhely érhető el"}`}
+function toast(t){const e=$("#toast");e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,2600)}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+
+/* --- Játék --- */
+function startRound(idx){
+  const p=deck[idx]; if(!p)return;
+  const nums=new Set(); while(nums.size<6)nums.add(1+Math.floor(Math.random()*99));
+  R={idx,nums:[...nums],order:shuffle([0,1,2,3,4,5]),open:[],seq:[],over:false};
+  $("#reveal").hidden=true; renderPicker(); renderBoard(); renderWorth(); $("#callMsg").textContent="Kattints egy számra, vagy írd be a bemondottat.";
+  if(ON.active)onRoundStart();
+}
+function renderPicker(){
+  $("#picker").innerHTML=`<span class="label">Rejtély</span>`+deck.map((p,i)=>
+    `<button class="chip${S.done.includes(p.id)?" done":""}" data-i="${i}" aria-current="${R&&R.idx===i}" title="${S.done.includes(p.id)?"Már játszottátok":"Még nem játszottátok"}">${i+1}</button>`).join("");
+}
+function renderBoard(){
+  const p=deck[R.idx];
+  $("#stageTitle").textContent=`${R.idx+1}. rejtély`;
+  $("#stageCount").textContent=`${R.open.length} / 6 kép`;
+  $("#board").innerHTML=R.order.map((ci,pos)=>{
+    const c=p.clues[ci]||{}; const open=R.open.includes(pos); const n=R.seq.indexOf(pos);
+    return `<button class="tile${open?" open":""}" data-pos="${pos}" aria-label="${open?"Felfedett kép, nagyítás":"Szám: "+R.nums[pos]}">
+      <div class="in"><div class="face front"><span>${R.nums[pos]}</span></div>
+      <div class="face back">${open?vis(c.img):""}${open&&n>=0?`<span class="ord">${n+1}.</span>`:""}${open&&S.caps&&c.label?`<span class="cap">${esc(c.label)}</span>`:""}</div></div></button>`}).join("");
+}
+function renderWorth(){
+  const w=Math.max(1,7-Math.max(1,R?R.open.length:1));
+  $("#worth").textContent=R&&R.open.length===0?"–":w;
+  $("#worthTxt").textContent=R&&R.open.length===0?"előbb kérjetek egy képet":"pont";
+  const dis=!R||R.over||R.open.length===0;
+  $("#rightBtn").disabled=dis; $("#wrongBtn").disabled=dis; $("#passBtn").disabled=!R||R.over;
+  renderTeams();
+}
+function openPos(pos){
+  if(!R||R.over||R.open.includes(pos))return false;
+  R.open.push(pos);R.seq.push(pos);renderBoard();renderWorth();
+  if(ON.active){onReveal(pos);return true}
+  if(R.open.length===6)$("#callMsg").textContent="Minden kép fent van. Most már csak 1 pont jár a jó válaszért.";
+  else $("#callMsg").textContent=`${S.teams[S.cur]?.name||""}: tippeltek, vagy továbbadjátok a szót?`;
+  return true;
+}
+function callNumber(){
+  const v=parseInt($("#callNum").value,10); $("#callNum").value="";
+  if(!R)return; const pos=R.nums.indexOf(v);
+  if(pos<0){$("#callMsg").textContent=isNaN(v)?"Írj be egy számot.":`A ${v} nincs a táblán.`;return}
+  if(R.open.includes(pos)){$("#callMsg").textContent=`A ${v} már fel van fedve.`;return}
+  openPos(pos);
+}
+function nextTeam(){if(S.teams.length){S.cur=(S.cur+1)%S.teams.length;saveS();renderTeams()}}
+function finish(winner){
+  R.over=true; const p=deck[R.idx];
+  if(winner!=null){const w=Math.max(1,7-R.open.length);S.teams[winner].pts+=w;toast(`${S.teams[winner].name}: +${w} pont`)}
+  if(!S.done.includes(p.id))S.done.push(p.id); saveS();
+  R.open=[0,1,2,3,4,5].filter(x=>R.open.includes(x)).concat([0,1,2,3,4,5].filter(x=>!R.open.includes(x)));
+  renderBoard();renderWorth();renderPicker();renderReveal(winner);
+  if(ON.active){onSolve();renderOnlineEval();renderOnline()}
+  $("#reveal").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
+}
+function renderReveal(winner){
+  const p=deck[R.idx]; const seen=R.seq.length;
+  const ordered=R.order.map((ci,pos)=>({c:p.clues[ci]||{},pos})).sort((a,b)=>{const ia=R.seq.indexOf(a.pos),ib=R.seq.indexOf(b.pos);return (ia<0?99:ia)-(ib<0?99:ib)});
+  $("#reveal").innerHTML=`<span class="label">Megfejtés</span>
+    <h2>${esc(p.name)}</h2>
+    <div class="meta">${esc(p.years)}${p.period?" · "+esc(p.period):""}${winner!=null?` · ${esc(S.teams[winner].name)} ${seen} kép alapján fejtette meg`:""}</div>
+    <div class="why">${ordered.map(o=>{const n=R.seq.indexOf(o.pos);return `<article><div class="th">${isImg(o.c.img)?`<img src="${o.c.img}" alt="">`:esc(o.c.img||"?")}</div>
+      <div><h3>${n>=0?`<span class="label">${n+1}. kép</span> `:`<span class="label">nem kérték</span> `}${esc(o.c.label||"")}</h3><p>${esc(o.c.note||"")}</p></div></article>`}).join("")}</div>
+    <div class="reflect"><span class="label">Zárókérdések</span>
+      <p>Melyik kép után voltatok biztosak a válaszban? Mi volt a döntő tudás hozzá?</p>
+      <p>Melyik kép illett volna más személyre is? Kire, és miben különbözik a kettő?</p>
+      <p>Milyen hetedik képet adnátok ehhez a személyhez?</p></div>
+    <div class="row" style="max-width:420px"><button class="btn primary" id="nextRiddle">Következő rejtély</button></div>`;
+  $("#reveal").hidden=false;
+  $("#nextRiddle").onclick=()=>{const nd=deck.findIndex((x,i)=>i>R.idx&&!S.done.includes(x.id));const any=deck.findIndex(x=>!S.done.includes(x.id));startRound(nd>=0?nd:(any>=0?any:(R.idx+1)%deck.length));window.scrollTo({top:0})};
+}
+function renderTeams(){
+  $("#teams").innerHTML=S.teams.map((t,i)=>`<li class="team${i===S.cur?" cur":""}" data-i="${i}">
+    <span class="dot"></span><input id="team-${i}" value="${esc(t.name)}" aria-label="Csapatnév">
+    <span class="pts">${t.pts}</span>${S.teams.length>1?`<button class="x" data-x="${i}" aria-label="Csapat törlése">×</button>`:"<span></span>"}</li>`).join("");
+}
+function openLB(pos){
+  const c=deck[R.idx].clues[R.order[pos]]||{};
+  $("#lbBig").innerHTML=isImg(c.img)?`<img src="${c.img}" alt="">`:`<span class="emo">${esc(c.img)}</span>`;
+  $("#lb").hidden=false;$("#lbClose").focus();
+}
+
+$("#picker").addEventListener("click",e=>{const b=e.target.closest(".chip");if(b)startRound(+b.dataset.i)});
+$("#board").addEventListener("click",e=>{const t=e.target.closest(".tile");if(!t)return;const pos=+t.dataset.pos;if(!openPos(pos)&&R.open.includes(pos))openLB(pos)});
+$("#callBtn").onclick=callNumber;
+$("#callNum").addEventListener("keydown",e=>{if(e.key==="Enter")callNumber()});
+$("#rightBtn").onclick=()=>finish(S.cur);
+$("#wrongBtn").onclick=()=>{$("#callMsg").textContent=`Nem talált. Jön: ${S.teams[(S.cur+1)%S.teams.length].name}.`;nextTeam()};
+$("#passBtn").onclick=()=>{nextTeam();$("#callMsg").textContent=`${S.teams[S.cur].name} következik: kérjetek számot!`};
+$("#giveUp").onclick=()=>{if(R&&!R.over)finish(null)};
+$("#randomBtn").onclick=()=>{const free=deck.map((p,i)=>i).filter(i=>!S.done.includes(deck[i].id));const pool=free.length?free:deck.map((p,i)=>i);startRound(pool[Math.floor(Math.random()*pool.length)])};
+$("#teams").addEventListener("input",e=>{const li=e.target.closest(".team");if(li){S.teams[+li.dataset.i].name=e.target.value;saveS()}});
+$("#teams").addEventListener("click",e=>{const x=e.target.closest("[data-x]");if(x){S.teams.splice(+x.dataset.x,1);S.cur=Math.min(S.cur,S.teams.length-1);saveS();renderTeams();return}
+  const li=e.target.closest(".team");if(li&&e.target.tagName!=="INPUT"){S.cur=+li.dataset.i;saveS();renderTeams()}});
+$("#addTeam").onclick=()=>{S.teams.push({name:`${S.teams.length+1}. csapat`,pts:0});saveS();renderTeams()};
+$("#resetScores").onclick=()=>$("#resetConfirm").hidden=false;
+$("#resetNo").onclick=()=>$("#resetConfirm").hidden=true;
+$("#resetYes").onclick=()=>{S.teams.forEach(t=>t.pts=0);S.done=[];S.cur=0;saveS();$("#resetConfirm").hidden=true;renderTeams();renderPicker()};
+$("#showCaps").checked=!!S.caps;
+$("#showCaps").onchange=e=>{S.caps=e.target.checked;saveS();if(R)renderBoard()};
+$("#lbClose").onclick=()=>$("#lb").hidden=true;
+$("#lb").addEventListener("click",e=>{if(e.target.id==="lb")$("#lb").hidden=true});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")$("#lb").hidden=true});
+
+/* --- Fülek --- */
+function tab(name){["game","edit","help"].forEach(n=>{$("#view-"+n).hidden=n!==name;$("#tab-"+n).setAttribute("aria-selected",n===name)});
+  if(name==="edit")renderEditor(); if(name==="game"){if(!R||!deck[R.idx])startRound(0);else{renderPicker();renderBoard()}}}
+$("#tab-game").onclick=()=>tab("game");$("#tab-edit").onclick=()=>tab("edit");$("#tab-help").onclick=()=>tab("help");
+
+/* --- Szerkesztő --- */
+let E=0, delAsk=false;
+function blank(){return{id:"p"+Date.now().toString(36),name:"Új személy",years:"",period:"",clues:Array.from({length:6},()=>({img:"",label:"",note:""}))}}
+function renderEditor(){
+  E=Math.min(E,deck.length-1); renderUsage();
+  $("#plist").innerHTML=deck.map((p,i)=>`<button data-i="${i}" aria-current="${i===E}"><span class="n">${i+1}</span><span>${esc(p.name)}</span></button>`).join("");
+  const p=deck[E]; if(!p){$("#form").innerHTML=`<p class="note">Nincs még személy. Adj hozzá egyet.</p>`;return}
+  $("#form").innerHTML=`<div class="panel">
+    <div class="fields">
+      <div class="field"><label class="label" for="f-name">Név (a megfejtés)</label><input id="f-name" data-k="name" value="${esc(p.name)}"></div>
+      <div class="field"><label class="label" for="f-years">Évszámok</label><input id="f-years" data-k="years" value="${esc(p.years)}" placeholder="pl. 1342–1382"></div>
+      <div class="field"><label class="label" for="f-period">Korszak</label><input id="f-period" data-k="period" value="${esc(p.period)}" placeholder="pl. Anjou-kor"></div>
+    </div>
+    <div class="row" style="align-items:center">
+      <label class="btn primary" for="bulk" style="flex:0 0 auto">Hat kép feltöltése egyszerre</label>
+      <input type="file" id="bulk" accept="image/*" multiple hidden>
+      <span class="note" style="flex:1 1 240px">Jelöld ki a képeket egyszerre: fájlnév szerinti sorrendben kerülnek az 1–6. helyre (pl. 1.jpg, 2.jpg …). Egy-egy képet a képhelyre húzva is cserélhetsz.</span>
+    </div></div>
+    ${p.clues.map((c,j)=>`<div class="clue" data-j="${j}">
+      <div class="pv">${c.img?(isImg(c.img)?`<img src="${c.img}" alt="">`:esc(c.img)):"?"}</div>
+      <div class="cf">
+        <div class="field"><label class="label" for="c-emo-${j}">${j+1}. kép: emoji</label><input id="c-emo-${j}" data-c="img" value="${isImg(c.img)?"":esc(c.img)}" placeholder="pl. 🍫"></div>
+        <div class="field"><label class="label" for="c-lab-${j}">Rövid képaláírás (rejtett)</label><input id="c-lab-${j}" data-c="label" value="${esc(c.label)}" placeholder="pl. Nápolyi szelet"></div>
+        <div class="field wide"><label class="label" for="c-url-${j}">vagy kép linkje (https://…)</label><input id="c-url-${j}" data-c="url" value="${isUrl(c.img)?esc(c.img):""}" placeholder="pl. https://upload.wikimedia.org/…/kep.jpg" inputmode="url"></div>
+        <div class="field wide"><label class="label" for="c-note-${j}">Magyarázat a megfejtéshez</label><textarea id="c-note-${j}" data-c="note" rows="2">${esc(c.note)}</textarea></div>
+        <div class="row wide"><label class="btn small" for="c-file-${j}">Saját kép feltöltése</label><input type="file" id="c-file-${j}" accept="image/*" hidden data-file="${j}">
+          ${isImg(c.img)?`<button class="btn small" data-rmimg="${j}">Kép törlése</button>`:""}</div>
+      </div></div>`).join("")}
+    <div class="row">
+      <button class="btn" id="tryP">Kipróbálom a játékban</button>
+      <button class="btn" id="dupP">Másolat</button>
+      <button class="btn bad" id="delP">Személy törlése</button>
+    </div>
+    <div id="delConfirm" ${delAsk?"":"hidden"} class="confirm"><span>Törlöd: ${esc(p.name)}?</span><button class="btn small bad" id="delYes">Törlés</button><button class="btn small" id="delNo">Mégse</button></div>`;
+}
+function resizeImg(file){return new Promise((res,rej)=>{const r=new FileReader();r.onerror=rej;r.onload=()=>{const im=new Image();im.onerror=rej;im.onload=()=>{
+  const M=640,s=Math.min(1,M/Math.max(im.width,im.height));const cv=document.createElement("canvas");cv.width=Math.round(im.width*s);cv.height=Math.round(im.height*s);
+  const cx=cv.getContext("2d");cx.fillStyle="#fff";cx.fillRect(0,0,cv.width,cv.height);cx.drawImage(im,0,0,cv.width,cv.height);res(cv.toDataURL("image/jpeg",.8))};im.src=r.result};r.readAsDataURL(file)})}
+$("#plist").addEventListener("click",e=>{const b=e.target.closest("button");if(b){E=+b.dataset.i;delAsk=false;renderEditor()}});
+$("#form").addEventListener("input",e=>{const p=deck[E];const k=e.target.dataset.k,c=e.target.dataset.c;
+  if(k){p[k]=e.target.value;if(k==="name")$("#plist").querySelector(`[data-i="${E}"] span:last-child`).textContent=p.name}
+  else if(c==="url"){const box=e.target.closest(".clue"),j=+box.dataset.j,v=e.target.value.trim();
+    if(isUrl(v)){p.clues[j].img=v;box.querySelector(".pv").innerHTML=`<img src="${esc(v)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('small'),{textContent:'Itt nem látszik; a letöltött fájlban ellenőrizd'}))">`;box.querySelector('[data-c="img"]').value=""}
+    else if(!v&&isUrl(p.clues[j].img)){p.clues[j].img="";box.querySelector(".pv").textContent="?"}}
+  else if(c){const box=e.target.closest(".clue"),j=+box.dataset.j;p.clues[j][c]=e.target.value;if(c==="img"){box.querySelector(".pv").textContent=e.target.value||"?";const u=box.querySelector('[data-c="url"]');if(u)u.value=""}}
+  saveDeck()});
+$("#form").addEventListener("change",async e=>{
+  if(e.target.id==="bulk"){const fs=[...e.target.files].filter(f=>f.type.startsWith("image/")).sort((a,b)=>a.name.localeCompare(b.name,"hu",{numeric:true})).slice(0,6);
+    if(!fs.length)return; let bad=0; toast("Képek beolvasása…");
+    for(let i=0;i<fs.length;i++){try{deck[E].clues[i].img=await resizeImg(fs[i])}catch(err){bad++}}
+    saveDeck();renderEditor();toast(bad?`${fs.length-bad} kép betöltve, ${bad} nem sikerült.`:`${fs.length} kép betöltve.`);
+    if(e.target.files.length>6)toast("Csak az első hat képet használtam."); return}
+  const j=e.target.dataset.file;if(j==null||!e.target.files[0])return;
+  try{deck[E].clues[+j].img=await resizeImg(e.target.files[0]);saveDeck();renderEditor()}catch(err){toast("Ezt a képet nem sikerült beolvasni. Próbáld JPG vagy PNG formátumban.")}});
+$("#form").addEventListener("dragover",e=>{const c=e.target.closest(".clue");if(c){e.preventDefault();c.style.borderColor="var(--brass)"}});
+$("#form").addEventListener("dragleave",e=>{const c=e.target.closest(".clue");if(c)c.style.borderColor=""});
+$("#form").addEventListener("drop",async e=>{const c=e.target.closest(".clue");if(!c)return;e.preventDefault();c.style.borderColor="";
+  const f=[...(e.dataTransfer?.files||[])].find(f=>f.type.startsWith("image/"));if(!f){toast("Képfájlt húzz ide.");return}
+  try{deck[E].clues[+c.dataset.j].img=await resizeImg(f);saveDeck();renderEditor()}catch(err){toast("Ezt a képet nem sikerült beolvasni.")}});
+$("#form").addEventListener("click",e=>{const t=e.target;
+  if(t.dataset.rmimg!=null){deck[E].clues[+t.dataset.rmimg].img="";saveDeck();renderEditor()}
+  else if(t.id==="tryP"){tab("game");startRound(E)}
+  else if(t.id==="dupP"){const c=structuredClone(deck[E]);c.id="p"+Date.now().toString(36);c.name+=" (másolat)";deck.splice(E+1,0,c);E++;saveDeck();renderEditor()}
+  else if(t.id==="delP"){delAsk=true;$("#delConfirm").hidden=false}
+  else if(t.id==="delNo"){delAsk=false;$("#delConfirm").hidden=true}
+  else if(t.id==="delYes"){deck.splice(E,1);delAsk=false;E=Math.max(0,E-1);saveDeck();R=null;renderEditor()}});
+$("#newP").onclick=()=>{deck.push(blank());E=deck.length-1;saveDeck();renderEditor();$("#f-name").select()};
+$("#expShow").onclick=()=>{$("#io").hidden=false;$("#ioBtns").hidden=false;$("#io").value=JSON.stringify(deck,null,1)};
+function dl(name,text,type){try{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove();toast("Mentés elindítva. Ha nem jelenik meg a fájl, a letöltött appból próbáld.")}catch(e){toast("A mentés itt nem érhető el. Nyisd meg a letöltött HTML-fájlt, és onnan mentsd.")}}
+$("#expDl").onclick=()=>dl("ki-vagyok-en-keszlet.json",JSON.stringify(deck),"application/json");
+$("#expHtml").onclick=()=>{try{
+  const doc=new DOMParser().parseFromString(PRISTINE,"text/html");
+  doc.getElementById("deckdata").textContent=JSON.stringify(deck).replace(/</g,"\\u003c");
+  const fc=getCfg(); if(fc&&fc.apiKey&&doc.getElementById("fbconfig"))doc.getElementById("fbconfig").textContent=JSON.stringify(fc).replace(/</g,"\\u003c");
+  if(!doc.querySelector("meta[charset]")){const m=doc.createElement("meta");m.setAttribute("charset","utf-8");doc.head.prepend(m)}
+  doc.documentElement.setAttribute("lang","hu");
+  dl("ki-vagyok-en.html","<!doctype html>\n"+doc.documentElement.outerHTML,"text/html")}catch(e){toast("Nem sikerült összeállítani a fájlt.")}};
+$("#copyIo").onclick=()=>{const t=$("#io");navigator.clipboard?.writeText(t.value).then(()=>toast("Vágólapra másolva."),()=>{t.select();toast("Jelöld ki és másold Ctrl+C-vel.")})??(t.select())};
+function importText(txt){try{const d=JSON.parse(txt);if(!Array.isArray(d)||!d.every(p=>p.name&&Array.isArray(p.clues)))throw 0;
+  d.forEach(p=>{p.id=p.id||"p"+Math.random().toString(36).slice(2);while(p.clues.length<6)p.clues.push({img:"",label:"",note:""});p.clues=p.clues.slice(0,6)});
+  deck=d;E=0;R=null;saveDeck();renderEditor();toast(`${d.length} személy betöltve.`)}catch(e){toast("Ez nem érvényes készletfájl. Exportált JSON-t illessz be.")}}
+$("#loadIo").onclick=()=>importText($("#io").value);
+$("#impFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>importText(r.result);r.readAsText(f);e.target.value=""};
+$("#resetDeck").onclick=()=>$("#deckConfirm").hidden=false;
+$("#deckNo").onclick=()=>$("#deckConfirm").hidden=true;
+$("#deckYes").onclick=()=>{deck=structuredClone(BASE);E=0;R=null;saveDeck();$("#deckConfirm").hidden=true;renderEditor();toast("Alapkészlet visszaállítva.")};
+
+/* ===== Online játék (Firebase Realtime Database) ===== */
+const FB_VER="10.12.2";
+const RULES=`{
+  "rules": {
+    "games": {
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null && data.child('host').val() === auth.uid",
+        "host": {
+          ".write": "auth != null && !data.exists() && newData.val() === auth.uid"
+        },
+        "teams": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && root.child('games/'+$code+'/host').exists()",
+            ".validate": "newData.child('name').isString() && newData.child('name').val().length <= 24"
+          }
+        },
+        "guesses": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && !data.exists() && root.child('games/'+$code+'/state/phase').val() === 'play'",
+            ".validate": "newData.child('text').isString() && newData.child('text').val().length <= 60"
+          }
+        },
+        "pick": {
+          ".write": "auth != null && root.child('games/'+$code+'/state/turn').val() === auth.uid"
+        }
+      }
+    }
+  }
+}`;
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement("script");s.src=src;s.onload=res;s.onerror=()=>rej(new Error("load "+src));document.head.appendChild(s)})}
+function parseCfg(t){if(!t)return null;try{const j=JSON.parse(t);if(j&&j.apiKey)return j}catch(e){}
+  const o={};for(const m of String(t).matchAll(/([A-Za-z]+)\s*:\s*["']([^"']+)["']/g))o[m[1]]=m[2];return o.apiKey?o:null}
+let EMB_CFG=null;try{EMB_CFG=JSON.parse(document.getElementById("fbconfig").textContent)}catch(e){}
+function urlCfg(){try{const v=new URLSearchParams(location.search).get("fb");return v?JSON.parse(atob(v)):null}catch(e){return null}}
+function getCfg(){return (EMB_CFG&&EMB_CFG.apiKey&&EMB_CFG)||store.get("kivagyok.fb")||urlCfg()}
+let fbReady=null;
+function fbInit(){if(fbReady)return fbReady;
+  fbReady=(async()=>{const cfg=getCfg();if(!cfg||!cfg.apiKey)throw new Error("nocfg");if(!cfg.databaseURL)throw new Error("nodburl");
+    if(!window.firebase){const b=`https://www.gstatic.com/firebasejs/${FB_VER}/`;await loadScript(b+"firebase-app-compat.js");await loadScript(b+"firebase-auth-compat.js");await loadScript(b+"firebase-database-compat.js")}
+    if(!firebase.apps.length)firebase.initializeApp(cfg);
+    const a=firebase.auth();if(!a.currentUser)await a.signInAnonymously();
+    return {uid:a.currentUser.uid,db:firebase.database()}})();
+  fbReady.catch(()=>{fbReady=null});return fbReady}
+function fbErr(e){const m=String(e&&(e.code||"")+" "+(e.message||e));
+  if(/nocfg/.test(m))return "Nincs még online beállítás. A Szerkesztő fül alján add meg a Firebase-adatokat.";
+  if(/nodburl/.test(m))return "A beállításból hiányzik a databaseURL. Hozd létre a Realtime Database-t, majd másold ki újra a firebaseConfig részt.";
+  if(/admin-restricted|operation-not-allowed/i.test(m))return "A Firebase-ben nincs bekapcsolva az anonim bejelentkezés (Authentication → Sign-in method → Anonymous).";
+  if(/permission/i.test(m))return "A Firebase elutasította a műveletet. Ellenőrizd, hogy beillesztetted-e a biztonsági szabályokat.";
+  if(/load https|network|fetch/i.test(m))return "Nem sikerült elérni a Firebase-t. Van internet? Az online mód a Claude-oldalon nem működik, csak a honlapodra feltöltött fájlban.";
+  return "Hiba: "+m}
+const TS=()=>firebase.database.ServerValue.TIMESTAMP;
+const openKeys=o=>Object.keys(o||{}).filter(k=>o[k]).map(Number);
+function teamOrder(teams){return Object.entries(teams||{}).filter(e=>e[1]).sort((a,b)=>(a[1].at||0)-(b[1].at||0)).map(e=>e[0])}
+
+/* --- Tanári (host) oldal --- */
+const ON={active:false,code:null,uid:null,db:null,teams:{},guesses:{},st:{},offs:[]};
+const gref=p=>ON.db.ref(`games/${ON.code}`+(p?"/"+p:""));
+function eligible(){return teamOrder(ON.teams).filter(u=>!ON.guesses[u])}
+function nextTurnFrom(cur){const el=eligible();if(!el.length)return null;const ord=teamOrder(ON.teams);const i=cur?ord.indexOf(cur):-1;
+  if(i<0)return el[0];for(let k=1;k<=ord.length;k++){const u=ord[(i+k)%ord.length];if(el.includes(u))return u}return el[0]}
+function setTurn(u){ON.st.turn=u||null;if(u)ON.st.lastTurn=u;renderOnline();return gref().update({"state/turn":u||null,...(u?{"state/lastTurn":u}:{})}).catch(e=>toast(fbErr(e)))}
+async function hostStart(resumeCode){
+  let f;try{f=await fbInit()}catch(e){toast(fbErr(e));return}
+  ON.uid=f.uid;ON.db=f.db;
+  try{
+    if(resumeCode){const h=(await ON.db.ref(`games/${resumeCode}/host`).get()).val();
+      if(h!==ON.uid){store.set("kivagyok.host",null);renderOnline();toast("Ez a játék már nem folytatható. Indíts újat.");return}
+      ON.code=resumeCode}
+    else{let code=null;for(let i=0;i<20&&!code;i++){const c=String(1000+Math.floor(Math.random()*9000));if(!(await ON.db.ref(`games/${c}/host`).get()).exists())code=c}
+      if(!code)throw new Error("Nem találtam szabad kódot, próbáld újra.");
+      ON.code=code;await gref("host").set(ON.uid);
+      await gref("state").set({phase:"lobby",round:0,created:TS()})}
+  }catch(e){toast(fbErr(e));return}
+  ON.active=true;store.set("kivagyok.host",{code:ON.code});
+  const s=(await gref("state").get()).val()||{};ON.st=s;
+  if(resumeCode)rebuildFromState();
+  attachHost();renderOnline();
+}
+function attachHost(){
+  const t=gref("teams"),g=gref("guesses"),p=gref("pick");
+  const ht=snap=>{ON.teams=snap.val()||{};if(ON.st.phase==="play"&&!ON.st.turn&&!(R&&R.open.length===6))setTurn(nextTurnFrom(ON.st.lastTurn));renderOnline()};
+  const hg=snap=>{ON.guesses=snap.val()||{};const up={};
+    if(ON.st.phase==="play"){ON.st.stamps=ON.st.stamps||{};
+      for(const u in ON.guesses){if(ON.st.stamps[u]==null){const n=Math.max(1,R?R.open.length:1);ON.st.stamps[u]=n;up[`state/stamps/${u}`]=n}}}
+    if(Object.keys(up).length)gref().update(up).catch(e=>toast(fbErr(e)));
+    if(ON.st.phase==="play"&&ON.st.turn&&ON.guesses[ON.st.turn])setTurn(nextTurnFrom(ON.st.turn));
+    renderOnline();if(ON.st.phase==="solved")renderOnlineEval()};
+  const hp=snap=>{const v=snap.val();if(!v)return;p.remove().catch(()=>{});
+    if(ON.st.phase!=="play"||v.uid!==ON.st.turn||!R||R.over)return;
+    const pos=R.nums.indexOf(+v.num);if(pos<0||R.open.includes(pos))return;openPos(pos)};
+  t.on("value",ht);g.on("value",hg);p.on("value",hp);
+  ON.offs=[()=>t.off("value",ht),()=>g.off("value",hg),()=>p.off("value",hp)];
+}
+function onRoundStart(){if(!ON.active)return;
+  const prev=ON.st.lastTurn||null;ON.guesses={};
+  Object.assign(ON.st,{phase:"play",round:(ON.st.round||0)+1,puzzleNo:R.idx+1,nums:R.nums,map:R.order,open:null,stamps:null,results:null,solution:null,turn:null});
+  gref().update({"guesses":null,"pick":null,"state/phase":"play","state/round":ON.st.round,"state/puzzleNo":R.idx+1,"state/nums":R.nums,"state/map":R.order,
+    "state/open":null,"state/stamps":null,"state/results":null,"state/solution":null,"state/turn":null})
+    .then(()=>setTurn(nextTurnFrom(prev))).catch(e=>toast(fbErr(e)));
+  renderOnline()}
+function onReveal(pos){if(!ON.active||ON.st.phase!=="play")return;
+  const c=deck[R.idx].clues[R.order[pos]]||{};const o={img:c.img||"?",ord:R.seq.indexOf(pos)+1};
+  (ON.st.open=ON.st.open||{})[pos]=o;
+  const nt=R.open.length>=6?null:nextTurnFrom(ON.st.turn);
+  gref(`state/open/${pos}`).set(o).then(()=>setTurn(nt)).catch(e=>toast(fbErr(e)));
+  renderOnline()}
+function onSolve(){const p=deck[R.idx];
+  const sol={name:p.name,years:p.years||"",period:p.period||"",clues:R.order.map((ci,pos)=>{const c=p.clues[ci]||{};return{pos,ord:R.seq.indexOf(pos)+1,img:c.img||"?",label:c.label||"",note:c.note||""}})};
+  Object.assign(ON.st,{phase:"solved",solution:sol,turn:null});
+  gref().update({"state/phase":"solved","state/solution":sol,"state/turn":null,"pick":null}).catch(e=>toast(fbErr(e)))}
+function rebuildFromState(){const st=ON.st;if(!st.puzzleNo||!deck[st.puzzleNo-1]||!Array.isArray(st.nums))return;
+  const open=st.open||{};const seq=openKeys(open).sort((a,b)=>open[a].ord-open[b].ord);
+  R={idx:st.puzzleNo-1,nums:st.nums,order:Array.isArray(st.map)?st.map:[0,1,2,3,4,5],open:seq.slice(),seq:seq.slice(),over:st.phase==="solved"};
+  if(R.over)R.open=[0,1,2,3,4,5];
+  $("#reveal").hidden=true;renderPicker();renderBoard();renderWorth();
+  if(R.over){renderReveal(null);renderOnlineEval()}}
+function joinLink(){const base=location.href.split(/[?#]/)[0];const c=getCfg();
+  return `${base}?kod=${ON.code}`+(EMB_CFG&&EMB_CFG.apiKey?"":`&fb=${encodeURIComponent(btoa(JSON.stringify(c)))}`)}
+async function drawQr(link){const el=$("#onQr");el.innerHTML="";
+  try{if(!window.QRCode)await loadScript("https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js");
+    new QRCode(el,{text:link,width:240,height:240,correctLevel:QRCode.CorrectLevel.M})}
+  catch(e){el.innerHTML=`<p class="note">A QR-kód nem töltődött be. A csapatok a linket vagy a kódot használják.</p>`}}
+function renderOnline(){
+  const on=ON.active;$("#onOff").hidden=on;$("#onOn").hidden=!on;$("#scorePanel").hidden=on;$("#teamsPanel").hidden=on;
+  document.querySelectorAll(".callrow label,.callrow input,.callrow button").forEach(el=>el.hidden=on);
+  const hr=store.get("kivagyok.host");$("#onResumeRow").hidden=on||!(hr&&hr.code);if(hr&&hr.code)$("#onResume").textContent=`Előző játék folytatása (kód: ${hr.code})`;
+  if(!on)return;
+  $("#onCode").textContent=ON.code;const link=joinLink();if($("#onLink").value!==link){$("#onLink").value=link;drawQr(link)}
+  const ord=teamOrder(ON.teams),st=ON.st,sc=st.scores||{},stamps=st.stamps||{};
+  $("#onTeams").innerHTML=ord.length?ord.map(u=>{const g=ON.guesses[u],cur=st.turn===u;
+    return `<li class="team${cur?" cur":""}"><span class="dot"></span><span>${esc(ON.teams[u].name)}</span><span class="note">${g?`tippelt${stamps[u]?` (${stamps[u]} kép)`:""}`:(cur?"választ":"")}</span><span class="pts">${sc[u]||0}</span></li>`}).join("")
+    :`<li class="note">Még nem csatlakozott csapat.</li>`;
+  $("#onStartRound").hidden=st.phase!=="lobby";
+  $("#onSkip").disabled=st.phase!=="play"||!st.turn;
+  const msg=$("#callMsg");
+  if(st.phase==="lobby")msg.textContent=ord.length?`${ord.length} csapat csatlakozott. Indítsd a rejtvényt, ha mindenki bent van.`:"Várjuk a csapatokat: olvassák be a QR-kódot, vagy írják be a kódot.";
+  else if(st.phase==="play"){const el=eligible();
+    msg.textContent=!ord.length?"Nincs csatlakozott csapat.":!el.length?"Minden csapat tippelt. Jöhet a megfejtés.":(R&&R.open.length===6)?"Minden kép fent van. Várjuk a tippeket.":`Soron: ${ON.teams[st.turn]?.name||"–"}, számot választ a telefonján.`}
+  else msg.textContent="Megfejtés: jelöld a tippeket a lenti listában."}
+function normName(s){return String(s||"").toLowerCase().normalize("NFD").replace(/\p{M}/gu,"").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim()}
+function likely(guess,name){const g=normName(guess),n=normName(name);if(g.length<3)return false;if(n.includes(g)&&g.length>=4)return true;
+  return n.split(" ").filter(t=>t.length>=4).some(t=>g.includes(t))}
+function renderOnlineEval(){if(!ON.active||$("#reveal").hidden)return;let box=$("#onEval");
+  if(!box){box=document.createElement("div");box.id="onEval";box.className="panel";$("#reveal").insertBefore(box,$("#reveal").querySelector(".reflect"))}
+  const ord=teamOrder(ON.teams),p=deck[R.idx],res=ON.st.results||{},st=ON.st.stamps||{};
+  box.innerHTML=`<span class="label">A csapatok tippjei: jelöld, melyik jó</span>`+(ord.length?`<ul class="evals">${ord.map(u=>{const g=ON.guesses[u],nm=esc(ON.teams[u]?.name||"?");
+    if(!g)return `<li><b>${nm}</b><span class="note">nem tippelt</span><span></span></li>`;
+    const n=st[u]||1,w=Math.max(1,7-n),r=res[u];
+    return `<li class="${r||""}"><b>${nm}</b><span>„${esc(g.text)}” <span class="note">${n} kép után · ${w} pont</span>${likely(g.text,p.name)?` <span class="hint">egyezik a névvel</span>`:""}</span>
+      <span class="row" style="flex-wrap:nowrap"><button class="btn small${r==="ok"?" ok":""}" data-ev="ok" data-u="${u}">Jó</button><button class="btn small${r==="bad"?" bad":""}" data-ev="bad" data-u="${u}">Rossz</button></span></li>`}).join("")}</ul>`
+    :`<p class="note">Nem csatlakozott csapat.</p>`)}
+$("#reveal").addEventListener("click",e=>{const b=e.target.closest("[data-ev]");if(!b||!ON.active)return;
+  const u=b.dataset.u,v=b.dataset.ev,prev=(ON.st.results||{})[u]||null;if(prev===v)return;
+  const w=Math.max(1,7-((ON.st.stamps||{})[u]||1));let sc=(ON.st.scores||{})[u]||0;if(prev==="ok")sc-=w;if(v==="ok")sc+=w;
+  (ON.st.results=ON.st.results||{})[u]=v;(ON.st.scores=ON.st.scores||{})[u]=sc;
+  gref().update({[`state/results/${u}`]:v,[`state/scores/${u}`]:sc}).catch(er=>toast(fbErr(er)));renderOnlineEval();renderOnline()});
+$("#onStart").onclick=()=>hostStart(null);
+$("#onResume").onclick=()=>{const hr=store.get("kivagyok.host");if(hr&&hr.code)hostStart(hr.code)};
+$("#onStartRound").onclick=()=>startRound(R?R.idx:0);
+$("#onSkip").onclick=()=>setTurn(nextTurnFrom(ON.st.turn));
+$("#onCopy").onclick=()=>{const t=$("#onLink");navigator.clipboard?.writeText(t.value).then(()=>toast("Link másolva."),()=>{t.select();toast("Jelöld ki és másold Ctrl+C-vel.")})};
+$("#onEnd").onclick=()=>$("#onEndConfirm").hidden=false;
+$("#onEndNo").onclick=()=>$("#onEndConfirm").hidden=true;
+$("#onEndYes").onclick=async()=>{$("#onEndConfirm").hidden=true;ON.offs.forEach(f=>f());try{await gref().remove()}catch(e){}
+  ON.active=false;ON.teams={};ON.guesses={};ON.st={};store.set("kivagyok.host",null);
+  const ev=$("#onEval");if(ev)ev.remove();renderOnline();toast("Az online játék véget ért, az adatai törlődtek.")};
+
+/* --- Beállítás --- */
+(()=>{const c=store.get("kivagyok.fb")||(EMB_CFG&&EMB_CFG.apiKey?EMB_CFG:null);$("#fbCfg").value=c?JSON.stringify(c,null,1):"";$("#fbRules").value=RULES})();
+$("#fbSave").onclick=()=>{const c=parseCfg($("#fbCfg").value);
+  if(!c){$("#fbMsg").textContent="Nem találtam benne apiKey-t. A firebaseConfig = { … } részt másold be.";return}
+  if(!c.databaseURL){$("#fbMsg").textContent="Hiányzik a databaseURL. Előbb hozd létre a Realtime Database-t, utána másold ki újra a beállítást.";return}
+  store.set("kivagyok.fb",c);$("#fbCfg").value=JSON.stringify(c,null,1);
+  $("#fbMsg").textContent="Elmentve. Mentsd el az önálló HTML-t is, hogy a beállítás benne legyen a feltöltött fájlban."+(window.firebase&&firebase.apps.length?" A módosítás az oldal újratöltése után lép életbe.":"")};
+$("#fbTest").onclick=async()=>{$("#fbMsg").textContent="Kapcsolódás…";
+  try{const f=await fbInit();await f.db.ref("games/0000/host").get();$("#fbMsg").textContent="A kapcsolat működik: a Firebase elérhető, a bejelentkezés sikerült."}
+  catch(e){$("#fbMsg").textContent=fbErr(e)}};
+$("#fbRulesCopy").onclick=()=>{const t=$("#fbRules");navigator.clipboard?.writeText(t.value).then(()=>toast("Szabályok másolva."),()=>{t.select();toast("Jelöld ki és másold Ctrl+C-vel.")})};
+
+/* --- Telefonos (csapat) oldal --- */
+const P={code:null,uid:null,db:null,st:{},teams:{},mine:null,picking:false,ended:false};
+function isJoin(){const q=new URLSearchParams(location.search);return q.has("kod")||location.hash==="#csatlakozas"}
+function initJoin(){
+  document.querySelector("nav.tabs").hidden=true;["game","edit","help"].forEach(n=>$("#view-"+n).hidden=true);$("#view-join").hidden=false;
+  $(".brand p").textContent="Csatlakozzatok, válasszatok számot, és tippeljetek.";
+  const q=new URLSearchParams(location.search);$("#jCode").value=q.get("kod")||"";
+  const sv=store.get("kivagyok.team");if(sv&&sv.name){$("#jName").value=sv.name;if(sv.code===$("#jCode").value)join()}}
+async function join(){const code=$("#jCode").value.trim(),name=$("#jName").value.trim();
+  if(!/^\d{4}$/.test(code)){$("#jMsg").textContent="A játékkód négy számjegy.";return}
+  if(!name){$("#jMsg").textContent="Adjatok meg csapatnevet.";return}
+  $("#jMsg").textContent="Csatlakozás…";$("#jGo").disabled=true;
+  try{const f=await fbInit();P.uid=f.uid;P.db=f.db;
+    if(!(await P.db.ref(`games/${code}/host`).get()).exists())throw new Error("nogame");
+    P.code=code;const me=P.db.ref(`games/${code}/teams/${P.uid}`);const ex=(await me.get()).val();
+    await me.set({name:name.slice(0,24),at:ex&&ex.at?ex.at:TS()});
+    store.set("kivagyok.team",{code,name});attachPhone();$("#joinForm").hidden=true;$("#pView").hidden=false}
+  catch(e){$("#jMsg").textContent=/nogame/.test(e.message)?"Nincs ilyen kódú játék. Ellenőrizzétek a kódot.":fbErr(e)}
+  finally{$("#jGo").disabled=false}}
+function attachPhone(){const r=p=>P.db.ref(`games/${P.code}/${p}`);
+  $("#pCode").textContent=`Kód: ${P.code}`;
+  r("state").on("value",s=>{P.st=s.val()||{};P.picking=false;renderPhone()});
+  r("teams").on("value",s=>{P.teams=s.val()||{};renderPhone()});
+  r(`guesses/${P.uid}`).on("value",s=>{P.mine=s.val();renderPhone()});
+  r("host").on("value",s=>{if(!s.exists()){P.ended=true;store.set("kivagyok.team",null);renderPhone()}})}
+function renderPhone(){
+  const b=$("#pBanner"),stage=$("#pBoard").closest(".stage");
+  if(P.ended){b.className="banner";b.textContent="A tanár befejezte a játékot. Köszönjük!";stage.hidden=true;$("#pGuess").hidden=true;$("#pSol").hidden=true;return}
+  const st=P.st,me=P.teams[P.uid];$("#pTeam").textContent=me?me.name:"";
+  const open=st.open||{},nOpen=openKeys(open).length;
+  const myTurn=st.phase==="play"&&st.turn===P.uid&&!P.mine&&nOpen<6;
+  b.className="banner"+(myTurn?" go":"");
+  b.textContent=(!st.phase||st.phase==="lobby")?"Bent vagytok. Várjátok, hogy a tanár elindítsa a rejtvényt."
+    :st.phase==="solved"?"Megfejtés! Nézzétek meg lent, melyik kép mire utalt."
+    :myTurn?"Ti választotok számot! Koppintsatok egyre."
+    :P.mine?`Tippetek leadva (${(st.stamps||{})[P.uid]||nOpen} kép után). Várjátok a megfejtést.`
+    :nOpen===6?"Minden kép fent van. Adjátok le a tippeteket."
+    :`${P.teams[st.turn]?.name||"Egy csapat"} választ számot.`;
+  stage.hidden=!(st.phase==="play"||st.phase==="solved")||!Array.isArray(st.nums);
+  if(!stage.hidden){const sol=st.phase==="solved"&&st.solution?st.solution.clues:null;
+    $("#pBoard").innerHTML=st.nums.map((n,pos)=>{const o=open[pos]||(sol?sol.find(c=>c.pos===pos):null);
+      if(o)return `<div class="tile open"><div class="in"><div class="face front"></div><div class="face back">${vis(o.img)}${o.ord?`<span class="ord">${o.ord}.</span>`:""}</div></div></div>`;
+      return `<button class="tile" data-n="${n}"${myTurn&&!P.picking?"":" disabled"} aria-label="Szám: ${n}"><div class="in"><div class="face front"><span>${n}</span></div><div class="face back"></div></div></button>`}).join("")}
+  const canGuess=st.phase==="play"&&!P.mine&&nOpen>=1;$("#pGuess").hidden=!canGuess;
+  if(canGuess)$("#pWorth").textContent=`Ha most tippeltek, és jó: ${Math.max(1,7-nOpen)} pont. Csak egyszer tippelhettek!`;
+  else $("#pConfirm").hidden=true;
+  const sv=$("#pSol");sv.hidden=!(st.phase==="solved"&&st.solution);
+  if(!sv.hidden){const s=st.solution,res=(st.results||{})[P.uid],n=(st.stamps||{})[P.uid]||1;
+    const verdict=!P.mine?"Ebben a körben nem adtatok le tippet.":res==="ok"?`Eltaláltátok ${n} kép alapján: +${Math.max(1,7-n)} pont.`:res==="bad"?`A tippetek („${esc(P.mine.text)}”) nem talált.`:`A tippetek: „${esc(P.mine.text)}”. A tanár most értékeli.`;
+    sv.innerHTML=`<span class="label">Megfejtés</span><h2>${esc(s.name)}</h2><div class="meta">${esc(s.years)}${s.period?" · "+esc(s.period):""}</div><p style="margin:0"><b>${verdict}</b></p>
+      <div class="why">${(s.clues||[]).slice().sort((a,c)=>(a.ord||99)-(c.ord||99)).map(c=>`<article><div class="th">${isImg(c.img)?`<img src="${esc(c.img)}" alt="">`:esc(c.img)}</div><div><h3>${c.ord?`<span class="label">${c.ord}. kép</span> `:`<span class="label">nem kérték</span> `}${esc(c.label)}</h3><p>${esc(c.note)}</p></div></article>`).join("")}</div>`}
+  const ord=teamOrder(P.teams),sc=st.scores||{};
+  $("#pScores").innerHTML=ord.map(u=>`<li class="team${u===P.uid?" cur":""}"><span class="dot"></span><span>${esc(P.teams[u].name)}${u===P.uid?" (ti)":""}</span><span></span><span class="pts">${sc[u]||0}</span></li>`).join("")}
+$("#jGo").onclick=join;
+$("#jName").addEventListener("keydown",e=>{if(e.key==="Enter")join()});
+$("#pBoard").addEventListener("click",e=>{const t=e.target.closest("[data-n]");if(!t||t.disabled||P.picking)return;
+  P.picking=true;renderPhone();
+  P.db.ref(`games/${P.code}/pick`).set({uid:P.uid,num:+t.dataset.n,at:TS()}).catch(er=>{P.picking=false;toast(fbErr(er));renderPhone()})});
+$("#pSend").onclick=()=>{const v=$("#pText").value.trim();if(!v){toast("Írjátok be a tippet.");return}
+  $("#pConfTxt").textContent=`„${v}”: csak egyszer tippelhettek. Leadjátok?`;$("#pConfirm").hidden=false};
+$("#pNo").onclick=()=>$("#pConfirm").hidden=true;
+$("#pYes").onclick=()=>{const v=$("#pText").value.trim().slice(0,60);$("#pConfirm").hidden=true;if(!v)return;
+  P.db.ref(`games/${P.code}/guesses/${P.uid}`).set({text:v,at:TS()}).catch(er=>toast(/permission/i.test(String(er))?"A tippet már leadtátok, vagy a kör véget ért.":fbErr(er)))};
+
+if(isJoin()){initJoin()}else{
+startRound(0);renderOnline();
+(async()=>{await idb.open();
+  const saved=(await idb.get(KEY))||store.get(KEY);
+  if(Array.isArray(saved)&&saved.length){deck=saved;
+    if(!(await idb.get(KEY))&&idb.db){await idb.set(KEY,saved)}
+    if(!$("#view-edit").hidden)renderEditor(); else if(!ON.active)startRound(0)}
+  renderUsage()})();
+}
+</script></body></html>
